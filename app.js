@@ -1,4 +1,4 @@
-// D&D AI GM – Frontend (full, corrected)
+// D&D AI GM – Frontend (full, with size sanitizer + STT)
 
 // ----- Defaults (editable in footer; persisted to localStorage) -----
 let PROXY_BASE =
@@ -129,7 +129,6 @@ els.saveSession.onclick = () => saveCurrentSession();
 
 // ----- Composer (click + Enter) -----
 els.send.onclick = sendMessage;
-// Enter to send (no Shift) — FIXED
 els.input.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
@@ -140,41 +139,92 @@ els.input.addEventListener("keydown", (e) => {
 // ----- Image button -----
 els.genImage.onclick = generateImage;
 
-// ----- Mic toggle (simple visual pulse) -----
-let micStream = null;
-let micEnabled = true;
+// ----- Mic: record → /stt → insert text -----
+let rec = null;
+let micChunks = [];
+let isRecording = false;
+
+els.muteMic.textContent = "🎤 Talk";
+els.muteMic.setAttribute("aria-pressed", "false");
+
 els.muteMic.onclick = async () => {
-  if (!micStream) {
-    try {
-      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const src = ctx.createMediaStreamSource(micStream);
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 256;
-      src.connect(analyser);
-      const data = new Uint8Array(analyser.frequencyBinCount);
-      function tick() {
-        analyser.getByteFrequencyData(data);
-        const avg = data.reduce((a, b) => a + b, 0) / data.length;
-        const dot = els.apiDot;
-        if (micEnabled)
-          dot.style.boxShadow = `0 0 ${Math.min(
-            20,
-            Math.max(4, avg / 8)
-          )}px var(--success)`;
-        requestAnimationFrame(tick);
-      }
-      tick();
-    } catch {
-      alert("Microphone permission denied.");
-      return;
-    }
+  try {
+    if (!isRecording) await startRecording();
+    else await stopRecordingAndTranscribe();
+  } catch (e) {
+    console.error(e);
+    alert("Microphone error. Check permissions.");
   }
-  micEnabled = !micEnabled;
-  micStream.getTracks().forEach((t) => (t.enabled = micEnabled));
-  els.muteMic.textContent = micEnabled ? "🎤 On" : "🎤 Muted";
-  els.muteMic.setAttribute("aria-pressed", micEnabled ? "true" : "false");
 };
+
+async function startRecording() {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const mime = pickSupportedMime();
+  micChunks = [];
+  rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+  rec.ondataavailable = (e) => { if (e.data && e.data.size > 0) micChunks.push(e.data); };
+  rec.start(100);
+  isRecording = true;
+  els.muteMic.textContent = "⏹️ Stop";
+  els.muteMic.setAttribute("aria-pressed", "true");
+  pulseStatus(true);
+}
+async function stopRecordingAndTranscribe() {
+  if (!rec) return;
+  const stopped = new Promise(res => (rec.onstop = res));
+  rec.stop();
+  await stopped;
+  rec.stream.getTracks().forEach(t => t.stop());
+  isRecording = false;
+  els.muteMic.textContent = "🎤 Talk";
+  els.muteMic.setAttribute("aria-pressed", "false");
+  pulseStatus(false);
+
+  const blob = new Blob(micChunks, { type: rec.mimeType || "audio/webm" });
+  await transcribeBlob(blob);
+}
+function pickSupportedMime() {
+  const prefs = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/mp4;codecs=mp4a.40.2',
+    'audio/mp4',
+    'audio/mpeg'
+  ];
+  for (const m of prefs) {
+    if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) return m;
+  }
+  return '';
+}
+async function transcribeBlob(blob) {
+  if (!PROXY_BASE) { alert("Set a Proxy URL first."); return; }
+  try {
+    const form = new FormData();
+    const fileName = blob.type.includes("mp4") ? "speech.mp4"
+                    : blob.type.includes("mpeg") ? "speech.mp3"
+                    : "speech.webm";
+    form.append("file", blob, fileName);
+
+    const res = await fetch(`${PROXY_BASE}/stt`, { method: "POST", body: form });
+    const raw = await res.text();
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${raw || "STT error"}`);
+    const data = JSON.parse(raw);
+    const text = data?.text?.trim();
+    if (text) {
+      els.input.value = (els.input.value ? (els.input.value + " ") : "") + text;
+      scrollMessagesToEnd();
+    } else {
+      alert("No transcription text returned.");
+    }
+  } catch (err) {
+    console.error(err);
+    alert(`Transcription failed: ${err.message}`);
+  }
+}
+function pulseStatus(on) {
+  const dot = els.apiDot;
+  dot.style.boxShadow = on ? "0 0 12px var(--success)" : "";
+}
 
 // ----- TTS -----
 const TTS = {
@@ -191,17 +241,12 @@ function webSpeechSpeak(text) {
   }
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  u.rate = 1.0;
-  u.pitch = 1.0;
-  u.volume = 1.0;
+  u.rate = 1.0; u.pitch = 1.0; u.volume = 1.0;
   window.speechSynthesis.speak(u);
 }
 async function customHttpSpeak(text) {
   const url = els.ttsUrl.value.trim();
-  if (!url) {
-    alert("Set a Custom TTS endpoint URL first.");
-    return;
-  }
+  if (!url) { alert("Set a Custom TTS endpoint URL first."); return; }
   try {
     const res = await fetch(url, {
       method: "POST",
@@ -209,7 +254,7 @@ async function customHttpSpeak(text) {
       body: JSON.stringify({ text }),
     });
     if (!res.ok) throw new Error(`TTS HTTP ${res.status}`);
-    const blob = await res.blob(); // expects audio/*
+    const blob = await res.blob();
     const objUrl = URL.createObjectURL(blob);
     const audio = new Audio(objUrl);
     await audio.play();
@@ -275,16 +320,17 @@ async function sendMessage() {
   }
 }
 
-// ----- Image generation (b64_json OR url) -----
+// ----- Image generation (b64_json OR url + size sanitizer) -----
 async function generateImage() {
-  if (!session.lastGMUtterance) {
-    alert("No GM narration yet. Send a message first.");
-    return;
-  }
-  if (!PROXY_BASE) {
-    alert("Set a Proxy URL in the footer first.");
-    return;
-  }
+  if (!session.lastGMUtterance) { alert("No GM narration yet. Send a message first."); return; }
+  if (!PROXY_BASE) { alert("Set a Proxy URL in the footer first."); return; }
+
+  // Sanitize size (valid: 256x256, 512x512, 1024x1024)
+  const chosen = (els.imageSize?.value || "1024x1024").toLowerCase();
+  const allowed = new Set(["256x256", "512x512", "1024x1024"]);
+  const safeSize = allowed.has(chosen)
+    ? chosen
+    : (chosen.includes("768") ? "512x512" : "1024x1024");
 
   const prompt = `D&D scene: ${session.lastGMUtterance}
 Style: painterly, high detail, cinematic lighting.`;
@@ -293,7 +339,7 @@ Style: painterly, high detail, cinematic lighting.`;
     const res = await fetch(`${PROXY_BASE}/image`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, size: els.imageSize.value }),
+      body: JSON.stringify({ prompt, size: safeSize }),
     });
 
     const raw = await res.text();
@@ -321,10 +367,7 @@ function pruneMessages(msgs, maxTokens = 3500, hardLimit = 24) {
   for (let i = msgs.length - 1; i >= 0; i--) {
     const m = msgs[i];
     const approx = Math.ceil(((m.content || "").length) / 3);
-    if (m.role === "system") {
-      out.push(m);
-      continue;
-    }
+    if (m.role === "system") { out.push(m); continue; }
     if (count + approx > maxTokens || out.length > hardLimit) break;
     out.push(m);
     count += approx;
@@ -350,11 +393,7 @@ function scrollMessagesToEnd() {
 }
 function escapeHtml(s) {
   return s.replace(/[&<>'"]/g, (c) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    "'": "&#39;",
-    '"': "&quot;",
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;",
   }[c]));
 }
 
@@ -366,10 +405,7 @@ async function checkHealth() {
     return;
   }
   try {
-    const res = await fetch(`${PROXY_BASE}/health`, {
-      method: "GET",
-      cache: "no-store",
-    });
+    const res = await fetch(`${PROXY_BASE}/health`, { method: "GET", cache: "no-store" });
     if (res.ok) {
       els.status.classList.add("ok");
       els.status.classList.remove("err");
