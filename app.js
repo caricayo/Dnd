@@ -1,6 +1,9 @@
-// D&D AI GM – Frontend (improved)
-// Hard defaults (you can still override them in the footer; we persist to localStorage)
-let PROXY_BASE = localStorage.getItem("proxyUrl") || "https://dnd-openai-proxy.christestdnd.workers.dev";
+// D&D AI GM – Frontend (full, corrected)
+
+// ----- Defaults (editable in footer; persisted to localStorage) -----
+let PROXY_BASE =
+  localStorage.getItem("proxyUrl") ||
+  "https://dnd-openai-proxy.christestdnd.workers.dev";
 let MODEL = localStorage.getItem("model") || "gpt-4o-mini";
 let SYSTEM_PROMPT =
   localStorage.getItem("systemPrompt") ||
@@ -28,7 +31,7 @@ const els = {
   systemPrompt: document.getElementById("system-prompt"),
 };
 
-// --- Session state & persistence ---
+// ----- Session state -----
 let session = {
   id: crypto.randomUUID(),
   title: "New Campaign",
@@ -40,6 +43,7 @@ let session = {
   updatedAt: Date.now(),
 };
 
+// ----- Sessions: save/load/list -----
 function getAllSessions() {
   const raw = localStorage.getItem("dndSessions");
   return raw ? JSON.parse(raw) : [];
@@ -47,18 +51,22 @@ function getAllSessions() {
 function renderSessions() {
   const sessions = getAllSessions();
   els.sessionList.innerHTML = "";
-  sessions.sort((a, b) => b.updatedAt - a.updatedAt).forEach((s) => {
-    const li = document.createElement("li");
-    li.innerHTML = `<span class="title">${escapeHtml(s.title || "Untitled")}</span>
-                    <span class="meta">${new Date(s.updatedAt).toLocaleString()}</span>`;
-    li.onclick = () => loadSession(s.id);
-    els.sessionList.appendChild(li);
-  });
+  sessions
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .forEach((s) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span class="title">${escapeHtml(s.title || "Untitled")}</span>
+                      <span class="meta">${new Date(s.updatedAt).toLocaleString()}</span>`;
+      li.onclick = () => loadSession(s.id);
+      els.sessionList.appendChild(li);
+    });
 }
 function saveCurrentSession() {
   session.updatedAt = Date.now();
   if (!session.title || session.title === "New Campaign") {
-    const firstUser = session.messages.find((m) => m.role === "user" && (m.content || "").trim());
+    const firstUser = session.messages.find(
+      (m) => m.role === "user" && (m.content || "").trim()
+    );
     if (firstUser) session.title = firstUser.content.slice(0, 40);
   }
   const all = getAllSessions();
@@ -78,7 +86,7 @@ function loadSession(id) {
   scrollMessagesToEnd();
 }
 
-// --- UI init & bindings ---
+// ----- Init footer controls -----
 els.proxyUrl.value = PROXY_BASE;
 els.model.value = MODEL;
 els.systemPrompt.value = SYSTEM_PROMPT;
@@ -101,6 +109,7 @@ els.systemPrompt.addEventListener("change", () => {
   saveCurrentSession();
 });
 
+// ----- Header buttons -----
 els.newSession.onclick = () => {
   session = {
     id: crypto.randomUUID(),
@@ -118,7 +127,9 @@ els.newSession.onclick = () => {
 };
 els.saveSession.onclick = () => saveCurrentSession();
 
+// ----- Composer (click + Enter) -----
 els.send.onclick = sendMessage;
+// Enter to send (no Shift) — FIXED
 els.input.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
@@ -126,9 +137,10 @@ els.input.addEventListener("keydown", (e) => {
   }
 });
 
+// ----- Image button -----
 els.genImage.onclick = generateImage;
 
-// --- Mic toggle (simple on/off with level pulse) ---
+// ----- Mic toggle (simple visual pulse) -----
 let micStream = null;
 let micEnabled = true;
 els.muteMic.onclick = async () => {
@@ -145,7 +157,11 @@ els.muteMic.onclick = async () => {
         analyser.getByteFrequencyData(data);
         const avg = data.reduce((a, b) => a + b, 0) / data.length;
         const dot = els.apiDot;
-        if (micEnabled) dot.style.boxShadow = `0 0 ${Math.min(20, Math.max(4, avg / 8))}px var(--success)`;
+        if (micEnabled)
+          dot.style.boxShadow = `0 0 ${Math.min(
+            20,
+            Math.max(4, avg / 8)
+          )}px var(--success)`;
         requestAnimationFrame(tick);
       }
       tick();
@@ -160,7 +176,7 @@ els.muteMic.onclick = async () => {
   els.muteMic.setAttribute("aria-pressed", micEnabled ? "true" : "false");
 };
 
-// --- TTS adapter ---
+// ----- TTS -----
 const TTS = {
   speak(text) {
     const mode = els.ttsProvider.value;
@@ -207,7 +223,7 @@ els.ttsToggle.onclick = () => {
   if (last) TTS.speak(last.content);
 };
 
-// --- Messaging & streaming ---
+// ----- Chat send & stream -----
 async function sendMessage() {
   const text = els.input.value.trim();
   if (!text) return;
@@ -222,8 +238,7 @@ async function sendMessage() {
   els.input.value = "";
 
   try {
-    const url = `${PROXY_BASE}/chat`;
-    const res = await fetch(url, {
+    const res = await fetch(`${PROXY_BASE}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -233,7 +248,6 @@ async function sendMessage() {
     });
 
     if (!res.ok || !res.body) {
-      // Surface the real upstream error body so we can fix fast
       const errTxt = await res.text().catch(() => "");
       throw new Error(`HTTP ${res.status}: ${errTxt || "No response body"}`);
     }
@@ -261,8 +275,47 @@ async function sendMessage() {
   }
 }
 
+// ----- Image generation (b64_json OR url) -----
+async function generateImage() {
+  if (!session.lastGMUtterance) {
+    alert("No GM narration yet. Send a message first.");
+    return;
+  }
+  if (!PROXY_BASE) {
+    alert("Set a Proxy URL in the footer first.");
+    return;
+  }
+
+  const prompt = `D&D scene: ${session.lastGMUtterance}
+Style: painterly, high detail, cinematic lighting.`;
+
+  try {
+    const res = await fetch(`${PROXY_BASE}/image`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, size: els.imageSize.value }),
+    });
+
+    const raw = await res.text();
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${raw || "Image error"}`);
+
+    const data = JSON.parse(raw);
+    const item = data?.data?.[0];
+    if (item?.b64_json) {
+      els.image.src = `data:image/png;base64,${item.b64_json}`;
+    } else if (item?.url) {
+      els.image.src = item.url;
+    } else {
+      throw new Error("No image data returned (expected b64_json or url).");
+    }
+  } catch (err) {
+    console.error(err);
+    alert(`Image generation failed: ${err.message}`);
+  }
+}
+
+// ----- Helpers -----
 function pruneMessages(msgs, maxTokens = 3500, hardLimit = 24) {
-  // naive sliding window: keep last N messages + system
   const out = [];
   let count = 0;
   for (let i = msgs.length - 1; i >= 0; i--) {
@@ -282,51 +335,30 @@ function pruneMessages(msgs, maxTokens = 3500, hardLimit = 24) {
   return reversed;
 }
 
-// --- Image generation (handles b64_json OR url) ---
-async function generateImage() {
-  if (!session.lastGMUtterance) {
-    alert("No GM narration yet. Send a message first.");
-    return;
-  }
-  if (!PROXY_BASE) {
-    alert("Set a Proxy URL in the footer first.");
-    return;
-  }
-
-  const prompt = `D&D scene: ${session.lastGMUtterance}
-Style: painterly, high detail, cinematic lighting.`;
-
-  try {
-    const res = await fetch(`${PROXY_BASE}/image`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        prompt,
-        size: els.imageSize.value // 1024x1024, 768x768, 512x512 (from your UI)
-      })
-    });
-
-    const raw = await res.text();             // always read text first (better errors)
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${raw || "Image error"}`);
-
-    const data = JSON.parse(raw);
-    const item = data && data.data && data.data[0];
-
-    // New: accept both formats
-    if (item?.b64_json) {
-      els.image.src = `data:image/png;base64,${item.b64_json}`;
-    } else if (item?.url) {
-      els.image.src = item.url;
-    } else {
-      throw new Error("No image data returned (expected b64_json or url).");
-    }
-  } catch (err) {
-    console.error(err);
-    alert(`Image generation failed: ${err.message}`);
-  }
+function appendMessage(role, content) {
+  const wrapper = document.createElement("div");
+  wrapper.className = `msg ${role}`;
+  wrapper.innerHTML = `<div class="role">${role}</div>
+                       <div class="content"></div>`;
+  wrapper.querySelector(".content").textContent = content;
+  els.messages.appendChild(wrapper);
+  scrollMessagesToEnd();
+  return wrapper;
+}
+function scrollMessagesToEnd() {
+  els.messages.scrollTop = els.messages.scrollHeight;
+}
+function escapeHtml(s) {
+  return s.replace(/[&<>'"]/g, (c) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "'": "&#39;",
+    '"': "&quot;",
+  }[c]));
 }
 
-// --- Health check ---
+// ----- Health indicator -----
 async function checkHealth() {
   if (!PROXY_BASE) {
     els.status.classList.remove("ok", "err");
@@ -334,7 +366,10 @@ async function checkHealth() {
     return;
   }
   try {
-    const res = await fetch(`${PROXY_BASE}/health`, { method: "GET", cache: "no-store" });
+    const res = await fetch(`${PROXY_BASE}/health`, {
+      method: "GET",
+      cache: "no-store",
+    });
     if (res.ok) {
       els.status.classList.add("ok");
       els.status.classList.remove("err");
@@ -350,5 +385,6 @@ async function checkHealth() {
     els.apiText.textContent = "Offline";
   }
 }
+
 checkHealth();
 renderSessions();
