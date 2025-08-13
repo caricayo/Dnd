@@ -152,28 +152,12 @@ function loadSession(id) {
   scrollMessagesToEnd();
 }
 
-// ----- Init footer controls -----
-if (els.proxyUrl) els.proxyUrl.value = PROXY_BASE;
-if (els.model) els.model.value = MODEL;
-if (els.systemPrompt) els.systemPrompt.value = SYSTEM_PROMPT;
+// Force TTS to Custom + your URL every load
+if (els.ttsProvider) els.ttsProvider.value = "custom";
+if (els.ttsUrl) els.ttsUrl.value = "https://dnd-openai-proxy.christestdnd.workers.dev/tts";
+localStorage.setItem("ttsProvider", "custom");
+localStorage.setItem("ttsUrl", "https://dnd-openai-proxy.christestdnd.workers.dev/tts");
 
-els.proxyUrl?.addEventListener("change", () => {
-  PROXY_BASE = els.proxyUrl.value.trim();
-  localStorage.setItem("proxyUrl", PROXY_BASE);
-  checkHealth();
-});
-els.model?.addEventListener("change", () => {
-  MODEL = els.model.value.trim();
-  session.model = MODEL;
-  localStorage.setItem("model", MODEL);
-});
-els.systemPrompt?.addEventListener("change", () => {
-  SYSTEM_PROMPT = els.systemPrompt.value;
-  session.system = SYSTEM_PROMPT;
-  session.messages[0] = { role: "system", content: SYSTEM_PROMPT };
-  localStorage.setItem("systemPrompt", SYSTEM_PROMPT);
-  saveCurrentSession();
-});
 
 // ----- Sidebar toggle (collapsible settings) -----
 if (els.sidebarToggle && els.sidebar) {
