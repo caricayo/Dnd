@@ -1,7 +1,7 @@
 // D&D AI GM – Frontend
 // Set this to your Cloudflare Worker proxy URL at runtime via footer input.
 let PROXY_BASE = localStorage.getItem("proxyUrl") || "";
-let MODEL = localStorage.getItem("model") || "gpt-5";
+let MODEL = localStorage.getItem("model") || "gpt-4o-mini";
 let SYSTEM_PROMPT = localStorage.getItem("systemPrompt") || "You are a cinematic, fair D&D Game Master. It’s a sandbox. Defer to the player’s setup and house rules. Keep turns brisk and descriptive.";
 
 const els = {
@@ -58,7 +58,6 @@ function getAllSessions() {
 function saveCurrentSession() {
   session.updatedAt = Date.now();
   if (!session.title || session.title === "New Campaign") {
-    // Infer a title from the first user line
     const firstUser = session.messages.find(m => m.role === "user" && m.content.trim());
     if (firstUser) session.title = firstUser.content.slice(0, 40);
   }
@@ -125,81 +124,6 @@ els.input.addEventListener("keydown", (e) => {
 
 els.genImage.onclick = generateImage;
 
-let micStream = null;
-let micEnabled = true;
-els.muteMic.onclick = async () => {
-  if (!micStream) {
-    try {
-      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Simple level monitor to show mic is live
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const src = ctx.createMediaStreamSource(micStream);
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 256;
-      src.connect(analyser);
-      const data = new Uint8Array(analyser.frequencyBinCount);
-      function tick() {
-        analyser.getByteFrequencyData(data);
-        const avg = data.reduce((a,b)=>a+b,0)/data.length;
-        // pulse API dot subtly when mic is on
-        const dot = els.apiDot;
-        if (micEnabled) dot.style.boxShadow = `0 0 ${Math.min(20, Math.max(4, avg/8))}px var(--success)`;
-        requestAnimationFrame(tick);
-      }
-      tick();
-    } catch (err) {
-      alert("Microphone permission denied.");
-      return;
-    }
-  }
-  micEnabled = !micEnabled;
-  micStream.getTracks().forEach(t => t.enabled = micEnabled);
-  els.muteMic.textContent = micEnabled ? "🎤 On" : "🎤 Muted";
-  els.muteMic.setAttribute("aria-pressed", micEnabled ? "true" : "false");
-};
-
-// --- TTS adapter ---
-const TTS = {
-  speak(text) {
-    const mode = els.ttsProvider.value;
-    if (mode === "webspeech") return webSpeechSpeak(text);
-    if (mode === "custom") return customHttpSpeak(text);
-  }
-};
-function webSpeechSpeak(text) {
-  if (!("speechSynthesis" in window)) {
-    alert("Web Speech API not supported in this browser.");
-    return;
-  }
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.rate = 1.0; u.pitch = 1.0; u.volume = 1.0;
-  window.speechSynthesis.speak(u);
-}
-async function customHttpSpeak(text) {
-  const url = els.ttsUrl.value.trim();
-  if (!url) { alert("Set a Custom TTS endpoint URL first."); return; }
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text })
-    });
-    if (!res.ok) throw new Error(`TTS HTTP ${res.status}`);
-    const blob = await res.blob(); // expects audio/*
-    const objUrl = URL.createObjectURL(blob);
-    const audio = new Audio(objUrl);
-    await audio.play();
-  } catch (err) {
-    console.error(err);
-    alert("Custom TTS failed. Check CORS and endpoint.");
-  }
-}
-els.ttsToggle.onclick = () => {
-  const last = session.messages.slice().reverse().find(m => m.role === "assistant");
-  if (last) TTS.speak(last.content);
-};
-
 // --- Messaging & streaming ---
 async function sendMessage() {
   const text = els.input.value.trim();
@@ -209,7 +133,6 @@ async function sendMessage() {
   saveCurrentSession();
   els.input.value = "";
 
-  // Make the API call (stream)
   try {
     const url = `${PROXY_BASE}/chat`;
     const res = await fetch(url, {
@@ -220,36 +143,36 @@ async function sendMessage() {
         messages: pruneMessages(session.messages),
       })
     });
+
     if (!res.ok || !res.body) {
-      throw new Error(`HTTP ${res.status}`);
+      const errTxt = await res.text().catch(() => "");
+      throw new Error(`HTTP ${res.status}: ${errTxt || "No response body"}`);
     }
+
     const reader = res.body.getReader();
     let gmText = "";
-    const { value: firstChunk } = await reader.read();
-    let chunk = firstChunk;
     const decoder = new TextDecoder();
     const assistantEl = appendMessage("assistant", "");
-    while (chunk) {
-      const str = decoder.decode(chunk);
-      gmText += str;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      gmText += decoder.decode(value);
       assistantEl.querySelector(".content").textContent = gmText;
-      const n = await reader.read();
-      if (n.done) break;
-      chunk = n.value;
     }
     session.messages.push({ role: "assistant", content: gmText });
     session.lastGMUtterance = gmText;
     saveCurrentSession();
+
   } catch (err) {
     console.error(err);
-    appendMessage("assistant", "⚠️ Error talking to the GM. Check proxy URL and CORS.");
+    appendMessage("assistant", `⚠️ ${err.message}`);
   } finally {
     scrollMessagesToEnd();
   }
 }
 
+// --- Helper functions ---
 function pruneMessages(msgs, maxTokens = 3500, hardLimit = 24) {
-  // naive: keep last N exchanges + system
   const out = [];
   let count = 0;
   for (let i = msgs.length-1; i >= 0; i--) {
@@ -260,14 +183,12 @@ function pruneMessages(msgs, maxTokens = 3500, hardLimit = 24) {
     out.push(m);
     count += approx;
   }
-  // ensure system first
   const sys = msgs.find(m => m.role === "system");
   const reversed = out.reverse();
   if (!reversed.find(m=>m.role==="system") && sys) reversed.unshift(sys);
   return reversed;
 }
 
-// --- Image generation ---
 async function generateImage() {
   if (!session.lastGMUtterance) {
     alert("No GM narration yet. Send a message first.");
@@ -284,18 +205,17 @@ async function generateImage() {
         size: els.imageSize.value
       })
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
     const data = await res.json();
     const b64 = data?.data?.[0]?.b64_json;
     if (!b64) throw new Error("No image data.");
     els.image.src = `data:image/png;base64,${b64}`;
   } catch (err) {
     console.error(err);
-    alert("Image generation failed. Check proxy URL and your Worker logs.");
+    alert(`Image generation failed: ${err.message}`);
   }
 }
 
-// --- Rendering helpers ---
 function appendMessage(role, content) {
   const wrapper = document.createElement("div");
   wrapper.className = `msg ${role}`;
@@ -313,7 +233,6 @@ function escapeHtml(s) {
   return s.replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 }
 
-// --- Health check ---
 async function checkHealth() {
   if (!PROXY_BASE) {
     els.status.classList.remove("ok","err");
