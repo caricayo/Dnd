@@ -1,4 +1,4 @@
-// D&D AI GM – Frontend (full, with size sanitizer + STT + autospeak)
+// D&D AI GM – Frontend (beautified UI support + STT + autospeak + sidebar toggle)
 
 // ----- Defaults (editable in footer; persisted to localStorage) -----
 let PROXY_BASE =
@@ -8,27 +8,40 @@ let MODEL = localStorage.getItem("model") || "gpt-4o-mini";
 let SYSTEM_PROMPT =
   localStorage.getItem("systemPrompt") ||
   "You are a cinematic, fair D&D Game Master. It’s a sandbox. Defer to the player’s setup and house rules. Keep turns brisk and descriptive.";
-const AUTO_SPEAK = true; // speak AI replies automatically (change to false to disable)
+const AUTO_SPEAK = true; // speak AI replies automatically (set false to disable)
 
 // ----- DOM refs -----
 const els = {
+  // header/status
   apiDot: document.getElementById("api-dot"),
   apiText: document.getElementById("api-text"),
   status: document.getElementById("api-status"),
+
+  // sidebar + controls
+  sidebarToggle: document.getElementById("sidebar-toggle"),
+  sidebar: document.getElementById("sidebar"),
   newSession: document.getElementById("new-session"),
   saveSession: document.getElementById("save-session"),
   sessionList: document.getElementById("session-list"),
+
+  // chat
   messages: document.getElementById("messages"),
   input: document.getElementById("input"),
   send: document.getElementById("send"),
+
+  // image
   genImage: document.getElementById("gen-image"),
   image: document.getElementById("scene-image"),
   imageSize: document.getElementById("image-size"),
   clearImage: document.getElementById("clear-image"),
+
+  // voice
   muteMic: document.getElementById("mute-mic"),
   ttsToggle: document.getElementById("tts-toggle"),
   ttsProvider: document.getElementById("tts-provider"),
   ttsUrl: document.getElementById("tts-url"),
+
+  // footer settings
   proxyUrl: document.getElementById("proxy-url"),
   model: document.getElementById("model"),
   systemPrompt: document.getElementById("system-prompt"),
@@ -46,16 +59,16 @@ let session = {
   updatedAt: Date.now(),
 };
 
-// ===== TTS (define BEFORE any usage to avoid "before initialization" errors) =====
+// ===== TTS (define BEFORE any usage) =====
 const TTS = {
   speak(text) {
-    const mode = els.ttsProvider.value;
+    const mode = els.ttsProvider?.value || "webspeech";
     if (mode === "custom") {
-      const url = (els.ttsUrl.value || "").trim();
-      if (url) return customHttpSpeak(text);    // use your Worker /tts
-      return webSpeechSpeak(text);              // fallback if no URL set
+      const url = (els.ttsUrl?.value || "").trim();
+      if (url) return customHttpSpeak(text); // use your Worker /tts
+      return webSpeechSpeak(text);           // fallback if URL missing
     }
-    return webSpeechSpeak(text);                // default to browser Web Speech
+    return webSpeechSpeak(text);
   },
 };
 
@@ -75,8 +88,8 @@ function webSpeechSpeak(text) {
 }
 
 async function customHttpSpeak(text) {
-  const url = (els.ttsUrl.value || "").trim();
-  if (!url) return; // silently no-op if missing
+  const url = (els.ttsUrl?.value || "").trim();
+  if (!url) return; // silent no-op if not set
   try {
     const res = await fetch(url, {
       method: "POST",
@@ -140,21 +153,21 @@ function loadSession(id) {
 }
 
 // ----- Init footer controls -----
-els.proxyUrl.value = PROXY_BASE;
-els.model.value = MODEL;
-els.systemPrompt.value = SYSTEM_PROMPT;
+if (els.proxyUrl) els.proxyUrl.value = PROXY_BASE;
+if (els.model) els.model.value = MODEL;
+if (els.systemPrompt) els.systemPrompt.value = SYSTEM_PROMPT;
 
-els.proxyUrl.addEventListener("change", () => {
+els.proxyUrl?.addEventListener("change", () => {
   PROXY_BASE = els.proxyUrl.value.trim();
   localStorage.setItem("proxyUrl", PROXY_BASE);
   checkHealth();
 });
-els.model.addEventListener("change", () => {
+els.model?.addEventListener("change", () => {
   MODEL = els.model.value.trim();
   session.model = MODEL;
   localStorage.setItem("model", MODEL);
 });
-els.systemPrompt.addEventListener("change", () => {
+els.systemPrompt?.addEventListener("change", () => {
   SYSTEM_PROMPT = els.systemPrompt.value;
   session.system = SYSTEM_PROMPT;
   session.messages[0] = { role: "system", content: SYSTEM_PROMPT };
@@ -162,8 +175,19 @@ els.systemPrompt.addEventListener("change", () => {
   saveCurrentSession();
 });
 
+// ----- Sidebar toggle (collapsible settings) -----
+if (els.sidebarToggle && els.sidebar) {
+  // Start collapsed on small screens
+  const startCollapsed = window.matchMedia("(max-width: 900px)").matches;
+  if (startCollapsed) els.sidebar.classList.add("collapsed");
+
+  els.sidebarToggle.addEventListener("click", () => {
+    els.sidebar.classList.toggle("collapsed");
+  });
+}
+
 // ----- Header buttons -----
-els.newSession.onclick = () => {
+els.newSession && (els.newSession.onclick = () => {
   session = {
     id: crypto.randomUUID(),
     title: "New Campaign",
@@ -177,12 +201,12 @@ els.newSession.onclick = () => {
   els.messages.innerHTML = "";
   renderSessions();
   saveCurrentSession();
-};
-els.saveSession.onclick = () => saveCurrentSession();
+});
+els.saveSession && (els.saveSession.onclick = () => saveCurrentSession());
 
 // ----- Composer (click + Enter) -----
-els.send.onclick = sendMessage;
-els.input.addEventListener("keydown", (e) => {
+els.send && (els.send.onclick = sendMessage);
+els.input?.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     sendMessage();
@@ -190,31 +214,32 @@ els.input.addEventListener("keydown", (e) => {
 });
 
 // ----- Image buttons -----
-els.genImage.onclick = generateImage;
-els.clearImage.onclick = () => {
+els.genImage && (els.genImage.onclick = generateImage);
+els.clearImage && (els.clearImage.onclick = () => {
   if (els.image) {
     els.image.removeAttribute("src");
     els.image.alt = "Generated scene will appear here";
   }
-};
+});
 
 // ----- Mic: record → /stt → insert text -----
 let rec = null;
 let micChunks = [];
 let isRecording = false;
 
-els.muteMic.textContent = "🎤 Talk";
-els.muteMic.setAttribute("aria-pressed", "false");
-
-els.muteMic.onclick = async () => {
-  try {
-    if (!isRecording) await startRecording();
-    else await stopRecordingAndTranscribe();
-  } catch (e) {
-    console.error(e);
-    alert("Microphone error. Check permissions.");
-  }
-};
+if (els.muteMic) {
+  els.muteMic.textContent = "🎤 On";
+  els.muteMic.setAttribute("aria-pressed", "true");
+  els.muteMic.onclick = async () => {
+    try {
+      if (!isRecording) await startRecording();
+      else await stopRecordingAndTranscribe();
+    } catch (e) {
+      console.error(e);
+      alert("Microphone error. Check permissions.");
+    }
+  };
+}
 
 async function startRecording() {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -224,8 +249,10 @@ async function startRecording() {
   rec.ondataavailable = (e) => { if (e.data && e.data.size > 0) micChunks.push(e.data); };
   rec.start(100);
   isRecording = true;
-  els.muteMic.textContent = "⏹️ Stop";
-  els.muteMic.setAttribute("aria-pressed", "true");
+  if (els.muteMic) {
+    els.muteMic.textContent = "⏹️ Stop";
+    els.muteMic.setAttribute("aria-pressed", "false");
+  }
   pulseStatus(true);
 }
 async function stopRecordingAndTranscribe() {
@@ -235,8 +262,10 @@ async function stopRecordingAndTranscribe() {
   await stopped;
   rec.stream.getTracks().forEach(t => t.stop());
   isRecording = false;
-  els.muteMic.textContent = "🎤 Talk";
-  els.muteMic.setAttribute("aria-pressed", "false");
+  if (els.muteMic) {
+    els.muteMic.textContent = "🎤 On";
+    els.muteMic.setAttribute("aria-pressed", "true");
+  }
   pulseStatus(false);
 
   const blob = new Blob(micChunks, { type: rec.mimeType || "audio/webm" });
@@ -282,28 +311,29 @@ async function transcribeBlob(blob) {
 }
 function pulseStatus(on) {
   const dot = els.apiDot;
+  if (!dot) return;
   dot.style.boxShadow = on ? "0 0 12px var(--success)" : "";
 }
 
 // ----- TTS manual button -----
-els.ttsToggle.onclick = () => {
+els.ttsToggle && (els.ttsToggle.onclick = () => {
   const last = [...session.messages].reverse().find((m) => m.role === "assistant");
   if (last && last.content) TTS.speak(last.content);
-};
+});
 
 // ----- Chat send & stream (SSE parsed) -----
 async function sendMessage() {
-  const text = els.input.value.trim();
+  const text = (els.input?.value || "").trim();
   if (!text) return;
   if (!PROXY_BASE) {
-    appendMessage("assistant", "⚠️ Set a Proxy URL in the footer first.");
+    appendMessage("assistant", "⚠️ Set a Proxy URL in the sidebar first.");
     return;
   }
 
   appendMessage("user", text);
   session.messages.push({ role: "user", content: text });
   saveCurrentSession();
-  els.input.value = "";
+  if (els.input) els.input.value = "";
 
   try {
     const res = await fetch(`${PROXY_BASE}/chat`, {
@@ -371,23 +401,23 @@ async function sendMessage() {
   }
 }
 
-// ----- Image generation (with spinner + prompt cap ≤ 1000) -----
+// ----- Image generation (spinner + prompt cap ≤ 1000 + size sanitizer) -----
 async function generateImage() {
   if (!session.lastGMUtterance) { alert("No GM narration yet. Send a message first."); return; }
-  if (!PROXY_BASE) { alert("Set a Proxy URL in the footer first."); return; }
+  if (!PROXY_BASE) { alert("Set a Proxy URL in the sidebar first."); return; }
 
   // Show loading state on the button
   els.genImage.textContent = "🔄 Generating...";
   els.genImage.disabled = true;
 
-  // Sanitize size
+  // Sanitize size (supports square/portrait/landscape + safe fallback)
   const chosen = (els.imageSize?.value || "1024x1024").toLowerCase();
   const allowed = new Set(["256x256", "512x512", "1024x1024", "1024x1536", "1536x1024"]);
   const safeSize = allowed.has(chosen)
     ? chosen
     : (chosen.includes("768") ? "512x512" : "1024x1024");
 
-  // Build prompt with ≤ 1000 chars (include style lines in calculation)
+  // Build prompt with ≤ 1000 chars (include styling text in calculation)
   const STYLE = "Style: painterly, high detail, cinematic lighting.";
   const PREFIX = "D&D scene: ";
   const SEP = "\n";
@@ -421,7 +451,7 @@ async function generateImage() {
     alert(`Image generation failed: ${err.message}`);
   } finally {
     // Reset button state
-    els.genImage.textContent = "Generate Scene";
+    els.genImage.textContent = "🎨 Generate Scene";
     els.genImage.disabled = false;
   }
 }
@@ -466,25 +496,28 @@ function escapeHtml(s) {
 // ----- Health indicator -----
 async function checkHealth() {
   if (!PROXY_BASE) {
-    els.status.classList.remove("ok", "err");
-    els.apiText.textContent = "Set proxy URL ↓";
+    els.status?.classList.remove("ok", "err");
+    if (els.apiText) els.apiText.textContent = "Set proxy URL →";
     return;
   }
   try {
     const res = await fetch(`${PROXY_BASE}/health`, { method: "GET", cache: "no-store" });
     if (res.ok) {
-      els.status.classList.add("ok");
-      els.status.classList.remove("err");
-      els.apiText.textContent = "Connected";
+      els.status?.classList.add("ok");
+      els.status?.classList.remove("err");
+      if (els.apiText) els.apiText.textContent = "Connected";
+      if (els.apiDot) els.apiDot.style.background = "var(--success)";
     } else {
-      els.status.classList.add("err");
-      els.status.classList.remove("ok");
-      els.apiText.textContent = "Unavailable";
+      els.status?.classList.add("err");
+      els.status?.classList.remove("ok");
+      if (els.apiText) els.apiText.textContent = "Unavailable";
+      if (els.apiDot) els.apiDot.style.background = "var(--danger)";
     }
   } catch {
-    els.status.classList.add("err");
-    els.status.classList.remove("ok");
-    els.apiText.textContent = "Offline";
+    els.status?.classList.add("err");
+    els.status?.classList.remove("ok");
+    if (els.apiText) els.apiText.textContent = "Offline";
+    if (els.apiDot) els.apiDot.style.background = "var(--danger)";
   }
 }
 
