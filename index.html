@@ -1,403 +1,78 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>D&D DM — Voice + Art (Fixed)</title>
-  <style>
-    :root{
-      --bg:#0b0f14; --panel:#121821; --muted:#2a3342; --text:#e8eef6; --sub:#a8b3c7; --acc:#7a8cff; --ok:#59d499; --warn:#f6c35c; --err:#ff6b6b;
-      --br:16px;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif}
-    .wrap{max-width:1100px;margin:auto;min-height:100%;display:grid;grid-template-rows:auto 1fr auto;gap:12px;padding:12px}
-    header{display:flex;align-items:center;justify-content:space-between;gap:12px}
-    .title{display:flex;align-items:center;gap:10px;font-weight:800}
-    .badge{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--muted);color:var(--sub)}
-    .settings{background:var(--panel);border:1px solid #1b2330;border-radius:12px;padding:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .settings label{font-size:12px;color:var(--sub)}
-    .settings input,.settings select{background:#0f1520;border:1px solid #1c2736;color:var(--text);border-radius:10px;padding:8px 10px;min-width:220px}
-    .settings button{background:var(--acc);border:none;color:#0b0f14;padding:8px 12px;border-radius:10px;font-weight:700;cursor:pointer}
-    .card{background:var(--panel);border:1px solid #1b2330;border-radius:var(--br);overflow:hidden}
-    .card h2{margin:0;padding:12px 14px;border-bottom:1px solid #1b2330;color:var(--sub);font-size:16px}
-    .content{padding:12px}
-    .messages{max-height:420px;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:12px}
-    .msg{display:flex;gap:10px;align-items:flex-start}
-    .avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#0f1520;color:var(--acc);border:1px solid #223047;font-weight:800}
-    .msg.you .avatar{color:var(--ok)}
-    .bubble{background:#0f1520;border:1px solid #1c2736;border-radius:12px;padding:10px 12px}
-    .msg.error .bubble{background:#1b0f14;border-color:#47222c;color:#ffb3b3}
-    .inputRow{display:grid;grid-template-columns:1fr auto auto;gap:8px;padding:12px;border-top:1px solid #1b2330;background:#0e141d;position:sticky;bottom:0}
-    .inputRow input[type="text"]{background:#0b121c;border:1px solid #1b2739;color:var(--text);border-radius:12px;padding:12px}
-    .btn{background:var(--acc);border:none;color:#0b0f14;padding:0 14px;border-radius:12px;font-weight:800;cursor:pointer;min-width:90px}
-    .btn.secondary{background:var(--muted);color:var(--text)}
-    .btn.warn{background:var(--warn);color:#1a1402}
-    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .row > *{flex:1}
-    .row .btn{flex:0 0 auto}
-    .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid #223148;background:#0f1623;color:var(--sub)}
-    .hint{color:var(--sub);font-size:12px}
-    .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    @media (max-width:900px){.two{grid-template-columns:1fr}}
-    .voiceGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    @media (max-width:700px){.voiceGrid{grid-template-columns:1fr}}
-    .range{display:flex;align-items:center;gap:10px}
-    .grid{display:grid;gap:8px;grid-template-columns:repeat(3,1fr)}
-    @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
-    @media (max-width:520px){.grid{grid-template-columns:1fr}}
-    .thumb{background:#0f1520;border:1px solid #1c2736;border-radius:12px;overflow:hidden}
-    .thumb img{width:100%;display:block}
-    .status{position:fixed;right:12px;bottom:12px;background:#101826;color:var(--text);border:1px solid #203048;border-radius:12px;padding:10px 12px;box-shadow:0 6px 20px rgba(0,0,0,.25);display:none}
-    .status.show{display:block}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <header>
-      <div class="title">
-        <span>🧙‍♂️ D&D DM — Voice + Art</span>
-        <span class="badge">Fixed</span>
-        <span class="badge">Single-file</span>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D&D AI GM</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="left">
+        <h1>🗺️ D&D AI GM</h1>
+        <div id="api-status" class="status" title="API status">
+          <span class="dot" id="api-dot"></span>
+          <span id="api-text">Checking…</span>
+        </div>
       </div>
-      <form class="settings" onsubmit="return false" aria-label="Settings">
-        <div>
-          <label for="chatUrl">Chat API URL</label><br />
-          <input id="chatUrl" name="chatUrl" placeholder="https://worker.example.com/chat" />
-        </div>
-        <div>
-          <label for="imageUrl">Image API URL</label><br />
-          <input id="imageUrl" name="imageUrl" placeholder="https://worker.example.com/image" />
-        </div>
-        <div>
-          <label for="model">Model</label><br />
-          <select id="model" name="model">
-            <option value="gpt-4o-mini">gpt-4o-mini</option>
-            <option value="gpt-4.1-mini">gpt-4.1-mini</option>
-            <option value="gpt-4.1">gpt-4.1</option>
-          </select>
-        </div>
-        <div>
-          <button id="saveCfg" type="button" title="Save settings to this browser">Save</button><br />
-          <span class="hint">Endpoints are saved locally; never paste secrets here.</span>
-        </div>
-      </form>
+      <div class="right">
+        <button id="new-session" title="Start a new campaign">New Campaign</button>
+        <button id="save-session" title="Save this session">Save</button>
+      </div>
     </header>
 
-    <main class="two">
-      <!-- CHAT -->
-      <section class="card" id="chatPanel">
-        <h2>Chat</h2>
-        <div id="messages" class="messages" aria-live="polite"></div>
-        <div class="content">
-          <div class="row">
-            <label class="pill" for="chatInput">Message</label>
-            <div class="inputRow" role="group" aria-label="Chat input">
-              <input id="chatInput" type="text" placeholder="Type your message… (Enter to send)" autocomplete="off" />
-              <button class="btn" id="sendBtn" type="button">Send</button>
-              <button class="btn secondary" id="holdToTalkBtn" type="button" aria-pressed="false">🎙️ Hold to talk</button>
-            </div>
-          </div>
+    <main class="layout">
+      <aside class="sidebar">
+        <h2>Saved Sessions</h2>
+        <ul id="session-list"></ul>
+      </aside>
 
-          <div class="row">
-            <div class="voiceGrid">
-              <div>
-                <label class="pill" for="voiceSelect">TTS voice</label>
-                <div class="row">
-                  <select id="voiceSelect"></select>
-                  <select id="roleSelect" title="Prefix spoken lines with this role">
-                    <option value="Narrator">Narrator</option>
-                    <option value="Player">Player</option>
-                  </select>
-                </div>
-              </div>
-              <div class="range">
-                <label class="pill" for="rateRange">Rate</label>
-                <input type="range" id="rateRange" min="0.5" max="1.5" value="1" step="0.05" />
-                <span id="rateVal" class="hint">1.00x</span>
-              </div>
-            </div>
-            <div class="hint">Tip: Press and hold the mic button to dictate; release to auto-send. Replies auto-narrate.</div>
+      <section class="content">
+        <div class="image-panel">
+          <img id="scene-image" alt="Generated scene will appear here" />
+          <div class="image-controls">
+            <button id="gen-image">🎨 Generate Scene</button>
+            <select id="image-size">
+              <option value="1024x1024">1024×1024</option>
+              <option value="768x768">768×768</option>
+              <option value="512x512">512×512</option>
+            </select>
           </div>
         </div>
-      </section>
 
-      <!-- IMAGE GENERATION -->
-      <section class="card" id="imagePanel">
-        <h2>Scene Art</h2>
-        <div class="content">
-          <div class="row" style="align-items:stretch">
-            <label class="pill" for="imgPrompt">Art prompt</label>
-            <input id="imgPrompt" type="text" placeholder="Describe the scene to generate…" />
-            <button class="btn" id="genBtn" type="button">Generate Art</button>
+        <div class="chat-panel">
+          <div id="messages" class="messages" aria-live="polite"></div>
+
+          <div class="composer">
+            <textarea id="input" rows="2" placeholder="Say something to your Game Master…"></textarea>
+            <div class="row">
+              <button id="send">Send</button>
+              <button id="mute-mic" aria-pressed="true" title="Toggle microphone">🎤 On</button>
+              <button id="tts-toggle" title="Speak the last reply">🔈 Speak</button>
+              <select id="tts-provider" title="TTS provider">
+                <option value="webspeech">Web Speech (browser)</option>
+                <option value="custom">Custom HTTP (set below)</option>
+              </select>
+              <input id="tts-url" placeholder="Custom TTS endpoint (POST) returning audio/*" />
+            </div>
           </div>
-          <div id="imgHint" class="hint" style="margin-top:6px">Images appear below. Your backend can return URLs or base64 data URLs.</div>
-          <div class="grid" id="gallery" style="margin-top:10px"></div>
         </div>
       </section>
     </main>
 
-    <footer class="card">
-      <div class="content">
-        <div class="hint">
-          Backend contract: <code>POST /chat → {"reply": "..."}</code> &nbsp;|&nbsp; <code>POST /image → {"images": [ "...", {"url":"..."}, {"b64":"..."} ]}</code>
-        </div>
-      </div>
+    <footer class="app-footer">
+      <label>Proxy URL:
+        <input id="proxy-url" size="40" placeholder="https://your-worker.your-subdomain.workers.dev" />
+      </label>
+      <label>Model:
+        <input id="model" value="gpt-5" />
+      </label>
+      <label>System prompt:
+        <input id="system-prompt" size="60"
+          value="You are a cinematic, fair D&D Game Master. It’s a sandbox. Defer to the player’s setup and house rules. Keep turns brisk and descriptive." />
+      </label>
     </footer>
-  </div>
 
-  <div class="status" id="status"></div>
-
-  <script>
-    // ---------------------------
-    // Utilities
-    // ---------------------------
-    const els = {
-      chatUrl: document.getElementById('chatUrl'),
-      imageUrl: document.getElementById('imageUrl'),
-      model: document.getElementById('model'),
-      saveCfg: document.getElementById('saveCfg'),
-      messages: document.getElementById('messages'),
-      chatInput: document.getElementById('chatInput'),
-      sendBtn: document.getElementById('sendBtn'),
-      holdBtn: document.getElementById('holdToTalkBtn'),
-      voiceSelect: document.getElementById('voiceSelect'),
-      roleSelect: document.getElementById('roleSelect'),
-      rate: document.getElementById('rateRange'),
-      rateVal: document.getElementById('rateVal'),
-      genBtn: document.getElementById('genBtn'),
-      imgPrompt: document.getElementById('imgPrompt'),
-      gallery: document.getElementById('gallery'),
-      status: document.getElementById('status')
-    };
-
-    function toast(msg, ms=2000, kind='info'){
-      els.status.textContent = msg;
-      els.status.classList.add('show');
-      els.status.style.borderColor = kind==='error' ? '#5a2a2a' : '#203048';
-      setTimeout(()=> els.status.classList.remove('show'), ms);
-    }
-
-    function addMessage(role, text, error=false){
-      const row = document.createElement('div');
-      row.className = `msg ${role==='you'?'you':'bot'} ${error?'error':''}`;
-      row.innerHTML = `
-        <div class="avatar">${role==='you'?'Y':'AI'}</div>
-        <div class="bubble">${escapeHtml(text).replace(/\n/g,'<br/>')}</div>
-      `;
-      els.messages.appendChild(row);
-      els.messages.scrollTop = els.messages.scrollHeight;
-    }
-    function escapeHtml(s){return (s||'').toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-
-    async function postJSON(url, payload){
-      const res = await fetch(url, {
-        method:'POST',
-        headers:{'content-type':'application/json'},
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
-    }
-
-    // ---------------------------
-    // Persist settings
-    // ---------------------------
-    const cfg = {
-      chatUrl: localStorage.getItem('chatUrl') || '',
-      imageUrl: localStorage.getItem('imageUrl') || '',
-      model: localStorage.getItem('model') || 'gpt-4o-mini'
-    };
-    els.chatUrl.value = cfg.chatUrl;
-    els.imageUrl.value = cfg.imageUrl;
-    els.model.value = cfg.model;
-
-    els.saveCfg.addEventListener('click', () => {
-      localStorage.setItem('chatUrl', els.chatUrl.value.trim());
-      localStorage.setItem('imageUrl', els.imageUrl.value.trim());
-      localStorage.setItem('model', els.model.value);
-      toast('Settings saved.', 1500);
-    });
-
-    // ---------------------------
-    // TTS (Web Speech API) — fixed loadVoices (no nested backticks)
-    // ---------------------------
-    const synth = window.speechSynthesis;
-    let voices = [];
-
-    function loadVoices(){
-      try{
-        voices = synth ? synth.getVoices() : [];
-        const sel = els.voiceSelect;
-        sel.innerHTML = '';
-        const o0 = document.createElement('option');
-        o0.value = '';
-        o0.textContent = 'System Default';
-        sel.appendChild(o0);
-
-        voices.forEach(v => {
-          const o = document.createElement('option');
-          o.value = v.name; // store by voice name
-          o.textContent = v.name + (v.lang ? ' (' + v.lang + ')' : '');
-          sel.appendChild(o);
-        });
-
-        const saved = localStorage.getItem('voiceName');
-        if (saved) sel.value = saved;
-      }catch(e){ /* optional warn */ }
-    }
-
-    if (synth){
-      loadVoices();
-      if ('onvoiceschanged' in synth) synth.onvoiceschanged = loadVoices;
-    } else {
-      els.voiceSelect.disabled = true;
-    }
-
-    els.voiceSelect.addEventListener('change', () => {
-      localStorage.setItem('voiceName', els.voiceSelect.value || '');
-    });
-
-    els.rate.addEventListener('input', ()=> els.rateVal.textContent = Number(els.rate.value).toFixed(2)+'x');
-
-    function speak(text){
-      if (!('speechSynthesis' in window)) return;
-      if (!text?.trim()) return;
-      const role = els.roleSelect.value;
-      const u = new SpeechSynthesisUtterance(`${role}: ${text}`);
-      const chosen = (voices || []).find(v => v.name === els.voiceSelect.value);
-      if (chosen) u.voice = chosen;
-      u.rate = Number(els.rate.value || 1);
-      speechSynthesis.cancel();
-      speechSynthesis.speak(u);
-    }
-
-    // ---------------------------
-    // STT (Web Speech API) — Hold to talk
-    // ---------------------------
-    let rec, listening=false, sttSupported=false;
-    if ('webkitSpeechRecognition' in window){
-      rec = new webkitSpeechRecognition();
-      rec.continuous = false;
-      rec.lang = 'en-US';
-      rec.interimResults = true;
-      sttSupported = true;
-
-      rec.onresult = (e)=>{
-        let final = '';
-        for (let i=0;i<e.results.length;i++){
-          const r = e.results[i];
-          if (r.isFinal) final += r[0].transcript;
-        }
-        if (final) els.chatInput.value = final;
-      };
-      rec.onerror = (e)=> { toast('Mic error: '+(e.error||'unknown'), 2000, 'error'); stopListening(false); };
-      rec.onend = ()=> { if (listening) stopListening(true); };
-    }
-
-    function startListening(){
-      if (!sttSupported){ toast('Speech-to-text not supported here.', 2000, 'error'); return; }
-      if (listening) return;
-      try{
-        listening = true;
-        els.holdBtn.classList.add('warn'); els.holdBtn.textContent = '🎙️ Listening…';
-        rec.start();
-      }catch(e){ toast('Could not start mic.', 2000, 'error'); listening=false; }
-    }
-    function stopListening(sendAfter){
-      listening = false;
-      try{ rec.stop(); }catch(_){}
-      els.holdBtn.classList.remove('warn'); els.holdBtn.textContent = '🎙️ Hold to talk';
-      if (sendAfter) doSend();
-    }
-
-    els.holdBtn.addEventListener('pointerdown', (e)=>{ e.preventDefault(); startListening(); });
-    window.addEventListener('pointerup', ()=>{ if (listening) stopListening(true); });
-
-    // ---------------------------
-    // Chat send
-    // ---------------------------
-    async function doSend(){
-      const text = els.chatInput.value.trim();
-      if (!text) return;
-      addMessage('you', text);
-      els.chatInput.value = '';
-
-      const url = els.chatUrl.value.trim();
-      const model = els.model.value;
-      if (!url){ addMessage('bot', 'Set your Chat API URL in Settings first.', true); return; }
-
-      try{
-        toast('Sending…', 1000);
-        const data = await postJSON(url, { message: text, model });
-        const reply = (data && (data.reply || data.content || data.text)) || '(no reply)';
-        addMessage('bot', reply);
-        speak(reply);
-      }catch(err){
-        addMessage('bot', 'Chat error: '+err.message, true);
-      }
-    }
-
-    els.sendBtn.addEventListener('click', doSend);
-    els.chatInput.addEventListener('keydown', (e)=>{
-      if (e.key === 'Enter' && !e.shiftKey){
-        e.preventDefault(); doSend();
-      }
-    });
-
-    // ---------------------------
-    // Image generation
-    // ---------------------------
-    function addImage(src){
-      const div = document.createElement('div');
-      div.className = 'thumb';
-      const img = new Image();
-      img.alt = 'Generated image';
-      img.referrerPolicy = 'no-referrer';
-      img.src = src;
-      div.appendChild(img);
-      els.gallery.prepend(div);
-    }
-
-    async function doGenerate(){
-      const prompt = els.imgPrompt.value.trim();
-      if (!prompt){ toast('Write a prompt first.', 1500); return; }
-      const url = els.imageUrl.value.trim();
-      const model = els.model.value;
-      if (!url){ toast('Set your Image API URL in Settings.', 2000, 'error'); return; }
-
-      try{
-        els.genBtn.disabled = true;
-        els.genBtn.textContent = 'Generating…';
-        const data = await postJSON(url, { prompt, model, n: 1, size: '1024x1024' });
-        const images = data?.images || data?.data || [];
-        if (!images.length) throw new Error('No images returned');
-        for (const it of images){
-          if (typeof it === 'string'){
-            addImage(it);
-          } else if (it.url){
-            addImage(it.url);
-          } else if (it.b64 || it.base64){
-            addImage(`data:image/png;base64,${it.b64||it.base64}`);
-          }
-        }
-        toast('Image ready ✅', 1500);
-      }catch(err){
-        toast('Image error: '+err.message, 2500, 'error');
-      }finally{
-        els.genBtn.disabled = false;
-        els.genBtn.textContent = 'Generate Art';
-      }
-    }
-
-    els.genBtn.addEventListener('click', doGenerate);
-    els.imgPrompt.addEventListener('keydown', (e)=>{ if (e.key==='Enter') doGenerate(); });
-
-    // ---------------------------
-    // Welcome
-    // ---------------------------
-    addMessage('bot', 'Hey! Set your endpoints above, then type or hold the mic to chat. Use Scene Art to generate images. Replies will auto-narrate with your chosen TTS voice.');
-  </script>
-</body>
+    <script type="module" src="./app.js"></script>
+  </body>
 </html>
