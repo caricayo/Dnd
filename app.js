@@ -282,7 +282,7 @@ function pruneMessages(msgs, maxTokens = 3500, hardLimit = 24) {
   return reversed;
 }
 
-// --- Image generation ---
+// --- Image generation (handles b64_json OR url) ---
 async function generateImage() {
   if (!session.lastGMUtterance) {
     alert("No GM narration yet. Send a message first.");
@@ -292,47 +292,38 @@ async function generateImage() {
     alert("Set a Proxy URL in the footer first.");
     return;
   }
-  const prompt = `D&D scene: ${session.lastGMUtterance}\nStyle: painterly, high detail, cinematic lighting.`;
+
+  const prompt = `D&D scene: ${session.lastGMUtterance}
+Style: painterly, high detail, cinematic lighting.`;
+
   try {
-    const url = `${PROXY_BASE}/image`;
-    const res = await fetch(url, {
+    const res = await fetch(`${PROXY_BASE}/image`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         prompt,
-        size: els.imageSize.value,
-      }),
+        size: els.imageSize.value // 1024x1024, 768x768, 512x512 (from your UI)
+      })
     });
-    if (!res.ok) {
-      const txt = await res.text().catch(() => "");
-      throw new Error(`HTTP ${res.status}: ${txt || "Image error"}`);
+
+    const raw = await res.text();             // always read text first (better errors)
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${raw || "Image error"}`);
+
+    const data = JSON.parse(raw);
+    const item = data && data.data && data.data[0];
+
+    // New: accept both formats
+    if (item?.b64_json) {
+      els.image.src = `data:image/png;base64,${item.b64_json}`;
+    } else if (item?.url) {
+      els.image.src = item.url;
+    } else {
+      throw new Error("No image data returned (expected b64_json or url).");
     }
-    const data = await res.json();
-    const b64 = data?.data?.[0]?.b64_json;
-    if (!b64) throw new Error("No image data.");
-    els.image.src = `data:image/png;base64,${b64}`;
   } catch (err) {
     console.error(err);
     alert(`Image generation failed: ${err.message}`);
   }
-}
-
-// --- Rendering helpers ---
-function appendMessage(role, content) {
-  const wrapper = document.createElement("div");
-  wrapper.className = `msg ${role}`;
-  wrapper.innerHTML = `<div class="role">${role}</div>
-                       <div class="content"></div>`;
-  wrapper.querySelector(".content").textContent = content;
-  els.messages.appendChild(wrapper);
-  scrollMessagesToEnd();
-  return wrapper;
-}
-function scrollMessagesToEnd() {
-  els.messages.scrollTop = els.messages.scrollHeight;
-}
-function escapeHtml(s) {
-  return s.replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]));
 }
 
 // --- Health check ---
