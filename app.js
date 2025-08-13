@@ -343,65 +343,60 @@ async function sendMessage() {
   }
 }
 
-// ----- Image generation (b64_json OR url + size sanitizer) -----
+// ----- Image generation (with spinner + prompt cap ≤ 1000) -----
 async function generateImage() {
-    const button = document.querySelector('#generate-image-btn');
-    const imgEl = document.querySelector('#image-panel img');
-    const sizeSelect = document.querySelector('#image-size');
+  if (!session.lastGMUtterance) { alert("No GM narration yet. Send a message first."); return; }
+  if (!PROXY_BASE) { alert("Set a Proxy URL in the footer first."); return; }
 
-    // Get scene description or last message
-    let prompt = sceneDescription?.trim() || '';
+  // Show loading state on the button
+  els.genImage.textContent = "🔄 Generating...";
+  els.genImage.disabled = true;
 
-    // Fallback: use last chat message if no sceneDescription
-    if (!prompt && messages.length > 0) {
-        prompt = messages[messages.length - 1]?.content?.trim() || '';
+  // Sanitize size (keep your existing sanitizer behavior)
+  // Valid (most stable) sizes for current API: 256x256, 512x512, 1024x1024
+  const chosen = (els.imageSize?.value || "1024x1024").toLowerCase();
+  const allowed = new Set(["256x256", "512x512", "1024x1024"]);
+  const safeSize = allowed.has(chosen)
+    ? chosen
+    : (chosen.includes("768") ? "512x512" : "1024x1024"); // map odd values (like "auto") to safe defaults
+
+  // Build prompt with exact ≤ 1000 char guarantee (including prefix + style)
+  const STYLE = "Style: painterly, high detail, cinematic lighting.";
+  const PREFIX = "D&D scene: ";
+  const SEP = "\n";
+  let scene = (session.lastGMUtterance || "").trim();
+  let available = 1000 - (PREFIX.length + SEP.length + STYLE.length);
+  if (available < 0) available = 0;
+  if (scene.length > available) scene = scene.slice(0, available);
+  const prompt = `${PREFIX}${scene}${SEP}${STYLE}`;
+
+  try {
+    const res = await fetch(`${PROXY_BASE}/image`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, size: safeSize }),
+    });
+
+    const raw = await res.text();
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${raw || "Image error"}`);
+
+    const data = JSON.parse(raw);
+    const item = data?.data?.[0];
+    if (item?.b64_json) {
+      els.image.src = `data:image/png;base64,${item.b64_json}`;
+    } else if (item?.url) {
+      els.image.src = item.url;
+    } else {
+      throw new Error("No image data returned (expected b64_json or url).");
     }
-
-    // Ensure prompt is not empty
-    if (!prompt) {
-        alert('No description available for image generation.');
-        return;
-    }
-
-    // Truncate prompt to 1000 characters (OpenAI limit)
-    if (prompt.length > 1000) {
-        console.warn(`Prompt too long (${prompt.length} chars). Truncating to 1000 chars.`);
-        prompt = prompt.slice(0, 1000);
-    }
-
-    button.disabled = true;
-    button.textContent = 'Generating...';
-
-    try {
-        const resp = await fetch(`${API_BASE}/image`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                prompt,
-                size: sizeSelect.value
-            })
-        });
-
-        if (!resp.ok) {
-            const errText = await resp.text();
-            console.error('Image generation failed:', resp.status, errText);
-            alert(`Image generation failed: HTTP ${resp.status}\n${errText}`);
-            return;
-        }
-
-        const data = await resp.json();
-        if (data?.url) {
-            imgEl.src = data.url;
-        } else {
-            throw new Error('No image URL returned from API');
-        }
-    } catch (err) {
-        console.error(err);
-        alert(`Image generation failed: ${err.message}`);
-    } finally {
-        button.disabled = false;
-        button.textContent = 'Generate Scene';
-    }
+  } catch (err) {
+    console.error(err);
+    alert(`Image generation failed: ${err.message}`);
+  } finally {
+    // Reset button state
+    els.genImage.textContent = "Generate Scene";
+    els.genImage.disabled = false;
+  }
 }
 
 // ----- Helpers -----
