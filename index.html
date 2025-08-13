@@ -33,11 +33,11 @@
           <div class="image-controls">
             <button id="gen-image" type="button">🎨 Generate Scene</button>
             <select id="image-size">
-  <option value="1024x1024">1024×1024 (square)</option>
-  <option value="1024x1536">1024×1536 (portrait)</option>
-  <option value="1536x1024">1536×1024 (landscape)</option>
-  <option value="auto">Auto</option>
-</select>
+              <option value="1024x1024">1024×1024 (square)</option>
+              <option value="1024x1536">1024×1536 (portrait)</option>
+              <option value="1536x1024">1536×1024 (landscape)</option>
+              <option value="auto">Auto</option>
+            </select>
           </div>
         </div>
 
@@ -67,7 +67,12 @@
           placeholder="https://dnd-openai-proxy.yourname.workers.dev" />
       </label>
       <label>Model:
-        <input id="model" value="gpt-4o-mini" />
+        <!-- Replaced input with dropdown -->
+        <select id="model">
+          <option value="gpt-4o-mini" selected>GPT-4 (Mini)</option>
+          <option value="gpt-4o">GPT-4 (4o)</option>
+          <option value="gpt-5">GPT-5</option>
+        </select>
       </label>
       <label>System prompt:
         <input id="system-prompt" size="60"
