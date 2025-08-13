@@ -8,6 +8,8 @@ let MODEL = localStorage.getItem("model") || "gpt-4o-mini";
 let SYSTEM_PROMPT =
   localStorage.getItem("systemPrompt") ||
   "You are a cinematic, fair D&D Game Master. It’s a sandbox. Defer to the player’s setup and house rules. Keep turns brisk and descriptive.";
+const AUTO_SPEAK = true; // speak AI replies automatically
+
 
 const els = {
   apiDot: document.getElementById("api-dot"),
@@ -320,6 +322,10 @@ async function sendMessage() {
           session.messages.push({ role: "assistant", content: gmText });
           session.lastGMUtterance = gmText;
           saveCurrentSession();
+          if (AUTO_SPEAK && gmText) {
+  TTS.speak(gmText);
+}
+
           return;
         }
 
