@@ -1,75 +1,86 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>D&D AI GM</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <header>
-    <h1>D&D AI Game Master</h1>
-    <div id="api-status">
-      <span id="api-dot"></span>
-      <span id="api-text">Connecting...</span>
-    </div>
-  </header>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D&D AI GM</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="left">
+        <h1>🗺️ D&D AI GM</h1>
+        <div id="api-status" class="status" title="API status" aria-live="polite">
+          <span class="dot" id="api-dot"></span>
+          <span id="api-text">Checking…</span>
+        </div>
+      </div>
+      <div class="right">
+        <button id="new-session" title="Start a new campaign" type="button">New Campaign</button>
+        <button id="save-session" title="Save this session" type="button">Save</button>
+      </div>
+    </header>
 
-  <main>
-    <section id="messages"></section>
+    <main class="layout">
+      <aside class="sidebar">
+        <h2>Saved Sessions</h2>
+        <ul id="session-list"></ul>
+      </aside>
 
-    <div class="composer">
-      <textarea id="input" placeholder="Type your action..."></textarea>
-      <button id="send">Send</button>
-      <button id="gen-image">🎨 Generate Scene</button>
-      <select id="image-size">
-        <option value="1024x1024">1024×1024 (square)</option>
-        <option value="1024x1536">1024×1536 (portrait)</option>
-        <option value="1536x1024">1536×1024 (landscape)</option>
-        <option value="auto">Auto</option>
-      </select>
-      <!-- NEW clear button -->
-      <button id="clear-image" title="Clear the current scene">🧹 Clear</button>
-    </div>
+      <section class="content">
+        <div class="image-panel">
+          <img id="scene-image" alt="Generated scene will appear here" />
+          <div class="image-controls">
+            <button id="gen-image" type="button">🎨 Generate Scene</button>
+            <select id="image-size">
+              <option value="1024x1024">1024×1024 (square)</option>
+              <option value="1024x1536">1024×1536 (portrait)</option>
+              <option value="1536x1024">1536×1024 (landscape)</option>
+              <option value="auto">Auto</option>
+            </select>
+            <!-- NEW: clear image button -->
+            <button id="clear-image" type="button" title="Clear the current scene">🧹 Clear</button>
+          </div>
+        </div>
 
-    <div class="image-container">
-      <img id="scene-image" alt="Generated scene will appear here" />
-    </div>
-  </main>
+        <div class="chat-panel">
+          <div id="messages" class="messages" aria-live="polite"></div>
 
-  <footer>
-    <label>
-      Proxy URL:
-      <input id="proxy-url" type="text" />
-    </label>
-    <label>
-      Model:
-      <select id="model">
-        <option value="gpt-4o-mini">GPT-4o Mini</option>
-        <option value="gpt-4o">GPT-4o</option>
-        <option value="gpt-5">GPT-5</option>
-      </select>
-    </label>
-    <label>
-      System Prompt:
-      <textarea id="system-prompt"></textarea>
-    </label>
-    <label>
-      TTS Provider:
-      <select id="tts-provider">
-        <option value="webspeech">Web Speech</option>
-        <option value="custom">Custom HTTP</option>
-      </select>
-    </label>
-    <input id="tts-url" type="text" placeholder="Custom TTS endpoint URL" />
+          <div class="composer">
+            <textarea id="input" rows="2" placeholder="Say something to your Game Master…"></textarea>
+            <div class="row">
+              <button id="send" type="button">Send</button>
+              <button id="mute-mic" aria-pressed="true" title="Toggle microphone" type="button">🎤 On</button>
+              <button id="tts-toggle" title="Speak the last reply" type="button">🔈 Speak</button>
+              <select id="tts-provider" title="TTS provider">
+                <option value="webspeech">Web Speech (browser)</option>
+                <option value="custom">Custom HTTP (set below)</option>
+              </select>
+              <input id="tts-url" placeholder="Custom TTS endpoint (POST) returning audio/* e.g. https://your-worker/tts" />
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
 
-    <button id="new-session">New Session</button>
-    <button id="save-session">Save Session</button>
+    <footer class="app-footer">
+      <label>Proxy URL:
+        <input id="proxy-url" size="40" autocomplete="off" spellcheck="false"
+          placeholder="https://dnd-openai-proxy.yourname.workers.dev" />
+      </label>
+      <label>Model:
+        <select id="model">
+          <option value="gpt-4o-mini" selected>GPT-4 (Mini)</option>
+          <option value="gpt-4o">GPT-4 (4o)</option>
+          <option value="gpt-5">GPT-5</option>
+        </select>
+      </label>
+      <label>System prompt:
+        <input id="system-prompt" size="60"
+          value="You are a cinematic, fair D&D Game Master. It’s a sandbox. Defer to the player’s setup and house rules. Keep turns brisk and descriptive." />
+      </label>
+    </footer>
 
-    <h3>Saved Sessions</h3>
-    <ul id="session-list"></ul>
-  </footer>
-
-  <script src="app.js"></script>
-</body>
+    <script type="module" src="./app.js"></script>
+  </body>
 </html>
