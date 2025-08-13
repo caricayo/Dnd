@@ -345,42 +345,63 @@ async function sendMessage() {
 
 // ----- Image generation (b64_json OR url + size sanitizer) -----
 async function generateImage() {
-  if (!session.lastGMUtterance) { alert("No GM narration yet. Send a message first."); return; }
-  if (!PROXY_BASE) { alert("Set a Proxy URL in the footer first."); return; }
+    const button = document.querySelector('#generate-image-btn');
+    const imgEl = document.querySelector('#image-panel img');
+    const sizeSelect = document.querySelector('#image-size');
 
-  // Sanitize size (valid: 256x256, 512x512, 1024x1024)
-  const chosen = (els.imageSize?.value || "1024x1024").toLowerCase();
-  const allowed = new Set(["256x256", "512x512", "1024x1024"]);
-  const safeSize = allowed.has(chosen)
-    ? chosen
-    : (chosen.includes("768") ? "512x512" : "1024x1024");
+    // Get scene description or last message
+    let prompt = sceneDescription?.trim() || '';
 
-  const prompt = `D&D scene: ${session.lastGMUtterance}
-Style: painterly, high detail, cinematic lighting.`;
-
-  try {
-    const res = await fetch(`${PROXY_BASE}/image`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, size: safeSize }),
-    });
-
-    const raw = await res.text();
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${raw || "Image error"}`);
-
-    const data = JSON.parse(raw);
-    const item = data?.data?.[0];
-    if (item?.b64_json) {
-      els.image.src = `data:image/png;base64,${item.b64_json}`;
-    } else if (item?.url) {
-      els.image.src = item.url;
-    } else {
-      throw new Error("No image data returned (expected b64_json or url).");
+    // Fallback: use last chat message if no sceneDescription
+    if (!prompt && messages.length > 0) {
+        prompt = messages[messages.length - 1]?.content?.trim() || '';
     }
-  } catch (err) {
-    console.error(err);
-    alert(`Image generation failed: ${err.message}`);
-  }
+
+    // Ensure prompt is not empty
+    if (!prompt) {
+        alert('No description available for image generation.');
+        return;
+    }
+
+    // Truncate prompt to 1000 characters (OpenAI limit)
+    if (prompt.length > 1000) {
+        console.warn(`Prompt too long (${prompt.length} chars). Truncating to 1000 chars.`);
+        prompt = prompt.slice(0, 1000);
+    }
+
+    button.disabled = true;
+    button.textContent = 'Generating...';
+
+    try {
+        const resp = await fetch(`${API_BASE}/image`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                prompt,
+                size: sizeSelect.value
+            })
+        });
+
+        if (!resp.ok) {
+            const errText = await resp.text();
+            console.error('Image generation failed:', resp.status, errText);
+            alert(`Image generation failed: HTTP ${resp.status}\n${errText}`);
+            return;
+        }
+
+        const data = await resp.json();
+        if (data?.url) {
+            imgEl.src = data.url;
+        } else {
+            throw new Error('No image URL returned from API');
+        }
+    } catch (err) {
+        console.error(err);
+        alert(`Image generation failed: ${err.message}`);
+    } finally {
+        button.disabled = false;
+        button.textContent = 'Generate Scene';
+    }
 }
 
 // ----- Helpers -----
