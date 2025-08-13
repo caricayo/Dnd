@@ -300,18 +300,41 @@ async function sendMessage() {
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     const assistantEl = appendMessage("assistant", "");
+    let buffer = "";
     let gmText = "";
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      gmText += decoder.decode(value, { stream: true });
-      assistantEl.querySelector(".content").textContent = gmText;
-    }
 
-    session.messages.push({ role: "assistant", content: gmText });
-    session.lastGMUtterance = gmText;
-    saveCurrentSession();
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop(); // keep last partial line
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data:")) continue;
+
+        const data = trimmed.slice(5).trim();
+        if (data === "[DONE]") {
+          session.messages.push({ role: "assistant", content: gmText });
+          session.lastGMUtterance = gmText;
+          saveCurrentSession();
+          return;
+        }
+
+        try {
+          const json = JSON.parse(data);
+          const delta = json.choices?.[0]?.delta?.content || "";
+          if (delta) {
+            gmText += delta;
+            assistantEl.querySelector(".content").textContent = gmText;
+          }
+        } catch (err) {
+          console.error("JSON parse error", err);
+        }
+      }
+    }
   } catch (err) {
     console.error(err);
     appendMessage("assistant", `⚠️ ${err.message}`);
