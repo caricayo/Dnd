@@ -63,4 +63,59 @@ input, select { background: #0d1522; color: var(--text); border: 1px solid var(-
   .layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
   .sidebar { order: 2; height: 200px; }
   .content { order: 1; }
+  /* Ensure the whole page is flexed so footer sits at bottom */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Main chat container grows to fill space above footer */
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  background: #111;
+  color: #fff;
+  box-sizing: border-box;
+}
+
+/* Footer stays pinned at the bottom without overlapping */
+footer {
+  flex-shrink: 0;
+  background: #222;
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-top: 1px solid #333;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  z-index: 5;
+}
+
+/* Make inputs in footer responsive */
+footer input, footer select, footer textarea {
+  background: #333;
+  border: 1px solid #444;
+  color: #fff;
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  flex: 1;
+  min-width: 120px;
+}
+
+/* Session list scrolls independently if needed */
+#session-list {
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+/* Optional: keep role labels tidy */
+.msg .role {
+  font-weight: bold;
+  margin-bottom: 0.2rem;
+}
 }
