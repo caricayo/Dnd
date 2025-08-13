@@ -10,14 +10,14 @@
     <header class="app-header">
       <div class="left">
         <h1>🗺️ D&D AI GM</h1>
-        <div id="api-status" class="status" title="API status">
+        <div id="api-status" class="status" title="API status" aria-live="polite">
           <span class="dot" id="api-dot"></span>
           <span id="api-text">Checking…</span>
         </div>
       </div>
       <div class="right">
-        <button id="new-session" title="Start a new campaign">New Campaign</button>
-        <button id="save-session" title="Save this session">Save</button>
+        <button id="new-session" title="Start a new campaign" type="button">New Campaign</button>
+        <button id="save-session" title="Save this session" type="button">Save</button>
       </div>
     </header>
 
@@ -31,7 +31,7 @@
         <div class="image-panel">
           <img id="scene-image" alt="Generated scene will appear here" />
           <div class="image-controls">
-            <button id="gen-image">🎨 Generate Scene</button>
+            <button id="gen-image" type="button">🎨 Generate Scene</button>
             <select id="image-size">
               <option value="1024x1024">1024×1024</option>
               <option value="768x768">768×768</option>
@@ -46,9 +46,9 @@
           <div class="composer">
             <textarea id="input" rows="2" placeholder="Say something to your Game Master…"></textarea>
             <div class="row">
-              <button id="send">Send</button>
-              <button id="mute-mic" aria-pressed="true" title="Toggle microphone">🎤 On</button>
-              <button id="tts-toggle" title="Speak the last reply">🔈 Speak</button>
+              <button id="send" type="button">Send</button>
+              <button id="mute-mic" aria-pressed="true" title="Toggle microphone" type="button">🎤 On</button>
+              <button id="tts-toggle" title="Speak the last reply" type="button">🔈 Speak</button>
               <select id="tts-provider" title="TTS provider">
                 <option value="webspeech">Web Speech (browser)</option>
                 <option value="custom">Custom HTTP (set below)</option>
@@ -62,10 +62,11 @@
 
     <footer class="app-footer">
       <label>Proxy URL:
-        <input id="proxy-url" size="40" placeholder="https://your-worker.your-subdomain.workers.dev" />
+        <input id="proxy-url" size="40" autocomplete="off" spellcheck="false"
+          placeholder="https://dnd-openai-proxy.yourname.workers.dev" />
       </label>
       <label>Model:
-        <input id="model" value="gpt-5" />
+        <input id="model" value="gpt-4o-mini" />
       </label>
       <label>System prompt:
         <input id="system-prompt" size="60"
