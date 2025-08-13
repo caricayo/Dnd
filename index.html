@@ -1,428 +1,403 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>D&D DM — Voice + Art</title>
-<style>
-  :root{--bg:#0b0c10;--panel:#111318;--ink:#e6e8ef;--muted:#a3a7b7;--brand:#6366f1;--chip:#1b1e27;--border:#212432;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444}
-  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,Segoe UI,Roboto,SF Pro Text,Helvetica,Arial}
-  .wrap{max-width:960px;margin:0 auto;padding:16px}
-  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
-  h1{font-size:20px;margin:0}
-  .btn{background:var(--brand);color:#fff;border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
-  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--ink);border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer}
-  .toolbar{display:flex;gap:8px;flex-wrap:wrap}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden}
-  .log{height:52vh;overflow:auto;padding:12px}
-  .msg{margin:10px 0;display:flex;gap:10px}
-  .msg.user{justify-content:flex-end}
-  .bubble{padding:10px 12px;border-radius:14px;background:var(--chip);max-width:75%}
-  .msg.user .bubble{background:#1f2433}
-  .role{font-size:12px;color:var(--muted);margin-bottom:4px}
-  .composer{display:flex;gap:8px;padding:10px;border-top:1px solid var(--border)}
-  .composer input{flex:1;padding:12px;border-radius:12px;border:1px solid var(--border);background:#0e111a;color:var(--ink)}
-  details{margin-top:12px} summary{cursor:pointer;color:var(--muted)}
-  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-  .field{display:flex;flex-direction:column;gap:6px}
-  .field input,.field select{padding:10px;border-radius:10px;border:1px solid var(--border);background:#0e111a;color:var(--ink)}
-  .note{color:var(--muted);font-size:13px}
-  /* Status + errors */
-  .status{display:flex;gap:10px;align-items:center;margin-bottom:10px}
-  .badge{padding:4px 8px;border-radius:999px;font-size:12px;border:1px solid var(--border)}
-  .ok{background:rgba(34,197,94,.15);border-color:rgba(34,197,94,.35)}
-  .warn{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.35)}
-  .err{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.35)}
-  .errbox{margin-top:10px;padding:10px;border:1px solid rgba(239,68,68,.45);border-radius:12px;background:rgba(239,68,68,.08);white-space:pre-wrap;font-size:13px}
-  /* Art panel */
-  .art-panel{position:sticky;bottom:0;margin-top:12px;padding:10px;background:rgba(17,19,24,.9);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:16px;display:grid;grid-template-columns:90px 1fr auto;gap:10px;align-items:center}
-  .art-thumb{width:90px;height:90px;object-fit:cover;border-radius:12px;border:1px solid var(--border);background:#0e111a}
-  .art-actions{display:flex;gap:8px}
-  .hidden{display:none}
-  /* Fullscreen modal */
-  .fs-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50}
-  .fs-img{max-width:96vw;max-height:92vh;border-radius:16px;border:1px solid var(--border)}
-  @media (max-width:700px){
-    .log{height:50vh}
-    .art-panel{grid-template-columns:70px 1fr;gap:8px}
-    .art-actions{grid-column:1 / -1}
-  }
-  /* Revision tag */
-  #revisionTag {
-    position: fixed;
-    bottom: 8px;
-    right: 12px;
-    font-size: 12px;
-    color: rgba(255,255,255,0.7);
-    background: rgba(0,0,0,0.35);
-    padding: 4px 8px;
-    border-radius: 6px;
-    pointer-events: none;
-    z-index: 9999;
-  }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>D&D DM — Voice + Art (Fixed)</title>
+  <style>
+    :root{
+      --bg:#0b0f14; --panel:#121821; --muted:#2a3342; --text:#e8eef6; --sub:#a8b3c7; --acc:#7a8cff; --ok:#59d499; --warn:#f6c35c; --err:#ff6b6b;
+      --br:16px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif}
+    .wrap{max-width:1100px;margin:auto;min-height:100%;display:grid;grid-template-rows:auto 1fr auto;gap:12px;padding:12px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .title{display:flex;align-items:center;gap:10px;font-weight:800}
+    .badge{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--muted);color:var(--sub)}
+    .settings{background:var(--panel);border:1px solid #1b2330;border-radius:12px;padding:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .settings label{font-size:12px;color:var(--sub)}
+    .settings input,.settings select{background:#0f1520;border:1px solid #1c2736;color:var(--text);border-radius:10px;padding:8px 10px;min-width:220px}
+    .settings button{background:var(--acc);border:none;color:#0b0f14;padding:8px 12px;border-radius:10px;font-weight:700;cursor:pointer}
+    .card{background:var(--panel);border:1px solid #1b2330;border-radius:var(--br);overflow:hidden}
+    .card h2{margin:0;padding:12px 14px;border-bottom:1px solid #1b2330;color:var(--sub);font-size:16px}
+    .content{padding:12px}
+    .messages{max-height:420px;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:12px}
+    .msg{display:flex;gap:10px;align-items:flex-start}
+    .avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#0f1520;color:var(--acc);border:1px solid #223047;font-weight:800}
+    .msg.you .avatar{color:var(--ok)}
+    .bubble{background:#0f1520;border:1px solid #1c2736;border-radius:12px;padding:10px 12px}
+    .msg.error .bubble{background:#1b0f14;border-color:#47222c;color:#ffb3b3}
+    .inputRow{display:grid;grid-template-columns:1fr auto auto;gap:8px;padding:12px;border-top:1px solid #1b2330;background:#0e141d;position:sticky;bottom:0}
+    .inputRow input[type="text"]{background:#0b121c;border:1px solid #1b2739;color:var(--text);border-radius:12px;padding:12px}
+    .btn{background:var(--acc);border:none;color:#0b0f14;padding:0 14px;border-radius:12px;font-weight:800;cursor:pointer;min-width:90px}
+    .btn.secondary{background:var(--muted);color:var(--text)}
+    .btn.warn{background:var(--warn);color:#1a1402}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .row > *{flex:1}
+    .row .btn{flex:0 0 auto}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid #223148;background:#0f1623;color:var(--sub)}
+    .hint{color:var(--sub);font-size:12px}
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media (max-width:900px){.two{grid-template-columns:1fr}}
+    .voiceGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    @media (max-width:700px){.voiceGrid{grid-template-columns:1fr}}
+    .range{display:flex;align-items:center;gap:10px}
+    .grid{display:grid;gap:8px;grid-template-columns:repeat(3,1fr)}
+    @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+    @media (max-width:520px){.grid{grid-template-columns:1fr}}
+    .thumb{background:#0f1520;border:1px solid #1c2736;border-radius:12px;overflow:hidden}
+    .thumb img{width:100%;display:block}
+    .status{position:fixed;right:12px;bottom:12px;background:#101826;color:var(--text);border:1px solid #203048;border-radius:12px;padding:10px 12px;box-shadow:0 6px 20px rgba(0,0,0,.25);display:none}
+    .status.show{display:block}
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <h1>🧙‍♂️ D&D DM — Voice + Art</h1>
-    <div class="toolbar">
-      <button id="holdToTalk" class="btn-ghost">🎙️ Hold to talk</button>
-      <label class="btn-ghost" style="display:flex;gap:8px;align-items:center">
-        <input type="checkbox" id="ttsToggle"> Narrator TTS
-      </label>
-      <button id="resetBtn" class="btn-ghost">Reset</button>
-      <button id="settingsBtn" class="btn">Settings</button>
-    </div>
-  </header>
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <span>🧙‍♂️ D&D DM — Voice + Art</span>
+        <span class="badge">Fixed</span>
+        <span class="badge">Single-file</span>
+      </div>
+      <form class="settings" onsubmit="return false" aria-label="Settings">
+        <div>
+          <label for="chatUrl">Chat API URL</label><br />
+          <input id="chatUrl" name="chatUrl" placeholder="https://worker.example.com/chat" />
+        </div>
+        <div>
+          <label for="imageUrl">Image API URL</label><br />
+          <input id="imageUrl" name="imageUrl" placeholder="https://worker.example.com/image" />
+        </div>
+        <div>
+          <label for="model">Model</label><br />
+          <select id="model" name="model">
+            <option value="gpt-4o-mini">gpt-4o-mini</option>
+            <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+            <option value="gpt-4.1">gpt-4.1</option>
+          </select>
+        </div>
+        <div>
+          <button id="saveCfg" type="button" title="Save settings to this browser">Save</button><br />
+          <span class="hint">Endpoints are saved locally; never paste secrets here.</span>
+        </div>
+      </form>
+    </header>
 
-  <div class="status">
-    <span id="apiBadge" class="badge warn">API: unknown</span>
-    <span id="secureBadge" class="badge warn">Secure: checking…</span>
+    <main class="two">
+      <!-- CHAT -->
+      <section class="card" id="chatPanel">
+        <h2>Chat</h2>
+        <div id="messages" class="messages" aria-live="polite"></div>
+        <div class="content">
+          <div class="row">
+            <label class="pill" for="chatInput">Message</label>
+            <div class="inputRow" role="group" aria-label="Chat input">
+              <input id="chatInput" type="text" placeholder="Type your message… (Enter to send)" autocomplete="off" />
+              <button class="btn" id="sendBtn" type="button">Send</button>
+              <button class="btn secondary" id="holdToTalkBtn" type="button" aria-pressed="false">🎙️ Hold to talk</button>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="voiceGrid">
+              <div>
+                <label class="pill" for="voiceSelect">TTS voice</label>
+                <div class="row">
+                  <select id="voiceSelect"></select>
+                  <select id="roleSelect" title="Prefix spoken lines with this role">
+                    <option value="Narrator">Narrator</option>
+                    <option value="Player">Player</option>
+                  </select>
+                </div>
+              </div>
+              <div class="range">
+                <label class="pill" for="rateRange">Rate</label>
+                <input type="range" id="rateRange" min="0.5" max="1.5" value="1" step="0.05" />
+                <span id="rateVal" class="hint">1.00x</span>
+              </div>
+            </div>
+            <div class="hint">Tip: Press and hold the mic button to dictate; release to auto-send. Replies auto-narrate.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- IMAGE GENERATION -->
+      <section class="card" id="imagePanel">
+        <h2>Scene Art</h2>
+        <div class="content">
+          <div class="row" style="align-items:stretch">
+            <label class="pill" for="imgPrompt">Art prompt</label>
+            <input id="imgPrompt" type="text" placeholder="Describe the scene to generate…" />
+            <button class="btn" id="genBtn" type="button">Generate Art</button>
+          </div>
+          <div id="imgHint" class="hint" style="margin-top:6px">Images appear below. Your backend can return URLs or base64 data URLs.</div>
+          <div class="grid" id="gallery" style="margin-top:10px"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="card">
+      <div class="content">
+        <div class="hint">
+          Backend contract: <code>POST /chat → {"reply": "..."}</code> &nbsp;|&nbsp; <code>POST /image → {"images": [ "...", {"url":"..."}, {"b64":"..."} ]}</code>
+        </div>
+      </div>
+    </footer>
   </div>
-  <div id="errbox" class="errbox hidden"></div>
 
-  <div class="card">
-    <div id="log" class="log"></div>
-    <div class="composer">
-      <input id="input" placeholder="Say something to the DM… (e.g., We enter the ruined city)"/>
-      <button id="send" class="btn">Send</button>
-    </div>
-  </div>
+  <div class="status" id="status"></div>
 
-  <details class="card" id="settingsPanel">
-    <summary>⚙️ Settings</summary>
-    <div style="padding:14px" class="grid">
-      <div class="field">
-        <label>API Proxy URL (Cloudflare Worker)</label>
-        <input id="apiUrl" placeholder="https://dnd-openai-proxy.&lt;subdomain&gt;.workers.dev"/>
-        <div class="note">Your Worker’s <code>/chat</code> endpoint.</div>
-      </div>
-      <div class="field">
-        <label>Generate images</label>
-        <select id="imagesMode">
-          <option value="auto">Auto (scene ≠ none)</option>
-          <option value="manual">Manual (only when pressed)</option>
-          <option value="off">Off</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Image size (cost control)</label>
-        <select id="imgSize">
-          <option value="1024">1024×1024</option>
-          <option value="512">512×512</option>
-          <option value="256">256×256</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Narrator voice</label>
-        <select id="voiceSelect"></select>
-        <div class="note">Uses your browser’s voices.</div>
-      </div>
-    </div>
-    <div style="padding:0 14px 14px 14px;display:flex;gap:10px">
-      <button id="saveSettings" class="btn">Save</button>
-      <button id="clearSettings" class="btn-ghost">Clear</button>
-      <button id="exportBtn" class="btn-ghost">Export Session</button>
-    </div>
-  </details>
-
-  <!-- Art panel (sticky) -->
-  <div class="art-panel">
-    <img id="artThumb" class="art-thumb" alt="No art"/>
-    <div>
-      <div style="font-weight:700">Scene Art</div>
-      <div id="artNote" class="note">No image yet.</div>
-    </div>
-    <div class="art-actions">
-      <button id="viewFull" class="btn-ghost hidden">View</button>
-      <button id="genArt" class="btn-ghost">Generate Art</button>
-    </div>
-  </div>
-</div>
-
-<!-- Fullscreen viewer -->
-<div id="fs" class="fs-backdrop"><img id="fsImg" class="fs-img" alt="Art"/></div>
-
-<!-- Revision tag -->
-<div id="revisionTag">Revision 1</div>
-
-<script>
-window.addEventListener('DOMContentLoaded', () => {
-  // ---------- CONFIG ----------
-  const API_BASE_DEFAULT = "https://dnd-openai-proxy.christestdnd.workers.dev"; // your Worker
-
-  // ---------- STATE ----------
-  const state = {
-    apiBase: localStorage.getItem("apiBase") || API_BASE_DEFAULT,
-    imagesMode: localStorage.getItem("imagesMode") || "auto",
-    imgSize: localStorage.getItem("imgSize") || "1024",
-    tts: JSON.parse(localStorage.getItem("tts") || "false"),
-    voiceName: localStorage.getItem("voiceName") || "",
-    history: [],
-    lastSceneIndex: null,
-    latestImageUrl: null
-  };
-
-  // ---------- ELEMENTS ----------
-  const $ = id => document.getElementById(id);
-  const logEl = $("log"), errBox = $("errbox");
-  const apiBadge = $("apiBadge"), secureBadge = $("secureBadge");
-  const speakBtn = $("holdToTalk");
-
-  // Seed settings UI
-  $("apiUrl").value = state.apiBase;
-  $("imagesMode").value = state.imagesMode;
-  $("imgSize").value = state.imgSize;
-  $("ttsToggle").checked = state.tts;
-
-  // ---------- STATUS ----------
-  function setBadge(el, text, cls){
-    el.textContent = text;
-    el.className = "badge " + cls;
-  }
-  setBadge(secureBadge, location.protocol === 'https:' ? 'Secure: HTTPS' : 'Secure: Not HTTPS', location.protocol === 'https:' ? 'ok':'warn');
-
-  async function pingAPI(){
-    try {
-      const res = await fetch(state.apiBase.replace(/\/$/,"") + "/health", { method:"GET" });
-      if (res.ok) setBadge(apiBadge, "API: online", "ok");
-      else setBadge(apiBadge, "API: error " + res.status, "err");
-    } catch {
-      setBadge(apiBadge, "API: unreachable", "err");
-    }
-  }
-  pingAPI();
-
-  function showError(msg){
-    errBox.textContent = msg;
-    errBox.classList.remove("hidden");
-  }
-  function clearError(){
-    errBox.classList.add("hidden");
-    errBox.textContent = "";
-  }
-
-  // ---------- RENDER ----------
-  function render(){
-    logEl.innerHTML = "";
-    state.history.forEach((m,i)=>{
-      const row = document.createElement("div");
-      row.className = "msg " + (m.role==="user"?"user":"assistant");
-      const b = document.createElement("div");
-      b.className = "bubble";
-      const r = document.createElement("div"); r.className="role"; r.textContent = m.role.toUpperCase();
-      const t = document.createElement("div"); t.textContent = m.text;
-      b.appendChild(r); b.appendChild(t); row.appendChild(b);
-
-      if (m.imageUrl){
-        const img = document.createElement("img");
-        img.src = m.imageUrl; img.className="img"; img.alt = m.scene||"scene";
-        row.appendChild(img);
-      }
-      if (m.role==="assistant" && m.scene && m.scene!=="none" && !m.imageUrl && state.imagesMode==="manual"){
-        const btn = document.createElement("button");
-        btn.textContent = "Generate Art for this scene";
-        btn.className = "btn-ghost";
-        btn.onclick = ()=> generateArt(i);
-        row.appendChild(btn);
-      }
-      logEl.appendChild(row);
-    });
-    logEl.scrollTop = logEl.scrollHeight;
-
-    const artThumb = $("artThumb"), artNote = $("artNote"), viewBtn = $("viewFull");
-    if (state.latestImageUrl){
-      artThumb.src = state.latestImageUrl;
-      artNote.textContent = "Latest generated scene";
-      viewBtn.classList.remove("hidden");
-    } else {
-      artThumb.src = ""; artThumb.alt = "No art";
-      artNote.textContent = "No image yet.";
-      viewBtn.classList.add("hidden");
-    }
-  }
-
-  // ---------- TTS ----------
-  const synth = window.speechSynthesis;
-  let voices = [];
-  function loadVoices(){
-    try {
-      voices = synth.getVoices();
-      const sel = $("voiceSelect"); sel.innerHTML = "";
-      const o0 = document.createElement("option"); o0.value=""; o0.textContent="System Default"; sel.appendChild(o0);
-      voices.forEach(v=>{ const o=document.createElement("option"); o.value=v.name; o.textContent=\`\${v.name}\${v.lang? \` (\${v.lang})\` : ""}\`; sel.appendChild(o); });
-      sel.value = state.voiceName;
-    } catch {}
-  }
-  if (synth){ loadVoices(); synth.onvoiceschanged = loadVoices; }
-
-  function speak(text){
-    if (!state.tts || !text || !synth) return;
-    try{
-      const u = new SpeechSynthesisUtterance(text);
-      if (state.voiceName){
-        const v = voices.find(v=>v.name===state.voiceName);
-        if (v) u.voice = v;
-      }
-      u.rate=1.02; u.pitch=1.0;
-      synth.cancel(); synth.speak(u);
-    }catch{}
-  }
-
-  // ---------- STT ----------
-  const hasSTT = ('webkitSpeechRecognition' in window) && (window.isSecureContext || location.hostname==='localhost');
-  const rec = hasSTT ? new webkitSpeechRecognition() : null;
-  if (rec){
-    rec.lang='en-US'; rec.continuous=false; rec.interimResults=false;
-    let holding=false;
-    const startRec = ()=>{ holding=true; clearError(); try{ rec.start(); $("holdToTalk").textContent="🎙️ Listening… release to send"; }catch(e){ showError("Mic start error: "+e.message); } };
-    const stopRec  = ()=>{ if(!holding) return; holding=false; try{ rec.stop(); $("holdToTalk").textContent="🎙️ Hold to talk"; }catch{} };
-
-    $("holdToTalk").addEventListener("mousedown", startRec);
-    $("holdToTalk").addEventListener("mouseup",   stopRec);
-    $("holdToTalk").addEventListener("touchstart", (e)=>{ e.preventDefault(); startRec(); }, {passive:false});
-    $("holdToTalk").addEventListener("touchend",   (e)=>{ e.preventDefault(); stopRec(); },   {passive:false});
-
-    rec.onresult = (e)=>{
-      const t = Array.from(e.results).map(r=>r[0].transcript).join(' ');
-      $("input").value = t; send();
+  <script>
+    // ---------------------------
+    // Utilities
+    // ---------------------------
+    const els = {
+      chatUrl: document.getElementById('chatUrl'),
+      imageUrl: document.getElementById('imageUrl'),
+      model: document.getElementById('model'),
+      saveCfg: document.getElementById('saveCfg'),
+      messages: document.getElementById('messages'),
+      chatInput: document.getElementById('chatInput'),
+      sendBtn: document.getElementById('sendBtn'),
+      holdBtn: document.getElementById('holdToTalkBtn'),
+      voiceSelect: document.getElementById('voiceSelect'),
+      roleSelect: document.getElementById('roleSelect'),
+      rate: document.getElementById('rateRange'),
+      rateVal: document.getElementById('rateVal'),
+      genBtn: document.getElementById('genBtn'),
+      imgPrompt: document.getElementById('imgPrompt'),
+      gallery: document.getElementById('gallery'),
+      status: document.getElementById('status')
     };
-    rec.onerror = (e)=> showError("Mic error: " + (e.error||"unknown"));
-  } else {
-    $("holdToTalk").textContent = "🎙️ Mic requires HTTPS";
-    $("holdToTalk").disabled = true;
-  }
 
-  // ---------- CHAT ----------
-  async function send(){
-    clearError();
-    const text = $("input").value.trim();
-    if (!text) return;
-    $("input").value = "";
-    state.history.push({ role:"user", text });
-    render();
+    function toast(msg, ms=2000, kind='info'){
+      els.status.textContent = msg;
+      els.status.classList.add('show');
+      els.status.style.borderColor = kind==='error' ? '#5a2a2a' : '#203048';
+      setTimeout(()=> els.status.classList.remove('show'), ms);
+    }
 
-    let data;
-    try {
-      const res = await fetch(state.apiBase.replace(/\/$/,"") + "/chat", {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ messages: state.history.map(m=>({ role:m.role, content:m.text })) })
+    function addMessage(role, text, error=false){
+      const row = document.createElement('div');
+      row.className = `msg ${role==='you'?'you':'bot'} ${error?'error':''}`;
+      row.innerHTML = `
+        <div class="avatar">${role==='you'?'Y':'AI'}</div>
+        <div class="bubble">${escapeHtml(text).replace(/\n/g,'<br/>')}</div>
+      `;
+      els.messages.appendChild(row);
+      els.messages.scrollTop = els.messages.scrollHeight;
+    }
+    function escapeHtml(s){return (s||'').toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+
+    async function postJSON(url, payload){
+      const res = await fetch(url, {
+        method:'POST',
+        headers:{'content-type':'application/json'},
+        body: JSON.stringify(payload)
       });
-      if (!res.ok){
-        const txt = await res.text();
-        showError("HTTP " + res.status + " from API\n" + txt);
-        data = { reply:"(API error.)", scene:"none" };
-      } else {
-        data = await res.json();
-      }
-    } catch (e) {
-      showError("Network error: " + e.message);
-      data = { reply:"(Network error.)", scene:"none" };
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
     }
 
-    let sceneIndex = null;
-    if (data.scene && data.scene !== "none") sceneIndex = state.history.length;
+    // ---------------------------
+    // Persist settings
+    // ---------------------------
+    const cfg = {
+      chatUrl: localStorage.getItem('chatUrl') || '',
+      imageUrl: localStorage.getItem('imageUrl') || '',
+      model: localStorage.getItem('model') || 'gpt-4o-mini'
+    };
+    els.chatUrl.value = cfg.chatUrl;
+    els.imageUrl.value = cfg.imageUrl;
+    els.model.value = cfg.model;
 
-    let imageUrl = null;
-    if (state.imagesMode==="auto" && data.scene && data.scene!=="none") {
-      imageUrl = data.imageUrl || null;
-      if (imageUrl) state.latestImageUrl = imageUrl;
+    els.saveCfg.addEventListener('click', () => {
+      localStorage.setItem('chatUrl', els.chatUrl.value.trim());
+      localStorage.setItem('imageUrl', els.imageUrl.value.trim());
+      localStorage.setItem('model', els.model.value);
+      toast('Settings saved.', 1500);
+    });
+
+    // ---------------------------
+    // TTS (Web Speech API) — fixed loadVoices (no nested backticks)
+    // ---------------------------
+    const synth = window.speechSynthesis;
+    let voices = [];
+
+    function loadVoices(){
+      try{
+        voices = synth ? synth.getVoices() : [];
+        const sel = els.voiceSelect;
+        sel.innerHTML = '';
+        const o0 = document.createElement('option');
+        o0.value = '';
+        o0.textContent = 'System Default';
+        sel.appendChild(o0);
+
+        voices.forEach(v => {
+          const o = document.createElement('option');
+          o.value = v.name; // store by voice name
+          o.textContent = v.name + (v.lang ? ' (' + v.lang + ')' : '');
+          sel.appendChild(o);
+        });
+
+        const saved = localStorage.getItem('voiceName');
+        if (saved) sel.value = saved;
+      }catch(e){ /* optional warn */ }
     }
 
-    state.history.push({ role:"assistant", text:data.reply || "(No reply)", scene:data.scene||"none", imageUrl });
-    if (sceneIndex !== null) state.lastSceneIndex = sceneIndex;
-
-    render();
-    speak(data.reply);
-  }
-
-  // Manual art
-  async function generateArt(indexOverride){
-    clearError();
-    const idx = (typeof indexOverride==="number") ? indexOverride : state.lastSceneIndex;
-    if (idx==null){ showError("No recent scene to illustrate."); return; }
-    const m = state.history[idx];
-    if (!m || m.role!=="assistant" || !m.scene || m.scene==="none"){ showError("That turn doesn’t need art."); return; }
-
-    try{
-      const res = await fetch(state.apiBase.replace(/\/$/,"") + "/chat", {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({
-          messages: [
-            ...state.history.map(x=>({ role:x.role, content:x.text })),
-            { role:"user", content:"Generate an illustration for the last scene only." }
-          ]
-        })
-      });
-      if (!res.ok){
-        const txt = await res.text();
-        showError("HTTP " + res.status + " from API\n" + txt);
-        return;
-      }
-      const data = await res.json();
-      if (data.imageUrl){
-        m.imageUrl = data.imageUrl;
-        state.latestImageUrl = data.imageUrl;
-        render();
-      } else {
-        showError("No image returned. If you just verified your org for images, give it a few minutes and try again.");
-      }
-    } catch (e) {
-      showError("Network error generating art: " + e.message);
+    if (synth){
+      loadVoices();
+      if ('onvoiceschanged' in synth) synth.onvoiceschanged = loadVoices;
+    } else {
+      els.voiceSelect.disabled = true;
     }
-  }
 
-  // ---------- UI WIRING ----------
-  $("send").onclick = send;
-  $("input").addEventListener("keydown", e=>{ if(e.key==="Enter") send(); });
-  $("settingsBtn").onclick = ()=> $("settingsPanel").open = !$("settingsPanel").open;
-  $("saveSettings").onclick = ()=>{
-    state.apiBase    = $("apiUrl").value.trim() || state.apiBase;
-    state.imagesMode = $("imagesMode").value;
-    state.imgSize    = $("imgSize").value;
-    state.tts        = $("ttsToggle").checked;
-    state.voiceName  = $("voiceSelect").value;
-    localStorage.setItem("apiBase", state.apiBase);
-    localStorage.setItem("imagesMode", state.imagesMode);
-    localStorage.setItem("imgSize", state.imgSize);
-    localStorage.setItem("tts", JSON.stringify(state.tts));
-    localStorage.setItem("voiceName", state.voiceName);
-    pingAPI();
-    alert("Saved.");
-  };
-  $("clearSettings").onclick = ()=>{
-    localStorage.removeItem("apiBase");
-    localStorage.removeItem("imagesMode");
-    localStorage.removeItem("imgSize");
-    localStorage.removeItem("tts");
-    localStorage.removeItem("voiceName");
-    $("apiUrl").value = API_BASE_DEFAULT;
-    $("imagesMode").value = "auto";
-    $("imgSize").value = "1024";
-    $("ttsToggle").checked = false;
-    alert("Settings cleared.");
-  };
-  $("resetBtn").onclick = ()=>{ state.history=[]; state.latestImageUrl=null; state.lastSceneIndex=null; render(); };
-  $("exportBtn").onclick = ()=>{
-    const blob = new Blob([JSON.stringify(state.history,null,2)], {type:"application/json"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href=url; a.download="session.json"; a.click();
-    URL.revokeObjectURL(url);
-  };
-  $("genArt").onclick = ()=> generateArt();
-  $("viewFull").onclick = ()=>{
-    if(!state.latestImageUrl) return;
-    $("fsImg").src = state.latestImageUrl;
-    $("fs").style.display = "flex";
-  };
-  $("fs").onclick = ()=>{ $("fs").style.display = "none"; };
+    els.voiceSelect.addEventListener('change', () => {
+      localStorage.setItem('voiceName', els.voiceSelect.value || '');
+    });
 
-  // Initial render
-  render();
-});
-</script>
+    els.rate.addEventListener('input', ()=> els.rateVal.textContent = Number(els.rate.value).toFixed(2)+'x');
+
+    function speak(text){
+      if (!('speechSynthesis' in window)) return;
+      if (!text?.trim()) return;
+      const role = els.roleSelect.value;
+      const u = new SpeechSynthesisUtterance(`${role}: ${text}`);
+      const chosen = (voices || []).find(v => v.name === els.voiceSelect.value);
+      if (chosen) u.voice = chosen;
+      u.rate = Number(els.rate.value || 1);
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    }
+
+    // ---------------------------
+    // STT (Web Speech API) — Hold to talk
+    // ---------------------------
+    let rec, listening=false, sttSupported=false;
+    if ('webkitSpeechRecognition' in window){
+      rec = new webkitSpeechRecognition();
+      rec.continuous = false;
+      rec.lang = 'en-US';
+      rec.interimResults = true;
+      sttSupported = true;
+
+      rec.onresult = (e)=>{
+        let final = '';
+        for (let i=0;i<e.results.length;i++){
+          const r = e.results[i];
+          if (r.isFinal) final += r[0].transcript;
+        }
+        if (final) els.chatInput.value = final;
+      };
+      rec.onerror = (e)=> { toast('Mic error: '+(e.error||'unknown'), 2000, 'error'); stopListening(false); };
+      rec.onend = ()=> { if (listening) stopListening(true); };
+    }
+
+    function startListening(){
+      if (!sttSupported){ toast('Speech-to-text not supported here.', 2000, 'error'); return; }
+      if (listening) return;
+      try{
+        listening = true;
+        els.holdBtn.classList.add('warn'); els.holdBtn.textContent = '🎙️ Listening…';
+        rec.start();
+      }catch(e){ toast('Could not start mic.', 2000, 'error'); listening=false; }
+    }
+    function stopListening(sendAfter){
+      listening = false;
+      try{ rec.stop(); }catch(_){}
+      els.holdBtn.classList.remove('warn'); els.holdBtn.textContent = '🎙️ Hold to talk';
+      if (sendAfter) doSend();
+    }
+
+    els.holdBtn.addEventListener('pointerdown', (e)=>{ e.preventDefault(); startListening(); });
+    window.addEventListener('pointerup', ()=>{ if (listening) stopListening(true); });
+
+    // ---------------------------
+    // Chat send
+    // ---------------------------
+    async function doSend(){
+      const text = els.chatInput.value.trim();
+      if (!text) return;
+      addMessage('you', text);
+      els.chatInput.value = '';
+
+      const url = els.chatUrl.value.trim();
+      const model = els.model.value;
+      if (!url){ addMessage('bot', 'Set your Chat API URL in Settings first.', true); return; }
+
+      try{
+        toast('Sending…', 1000);
+        const data = await postJSON(url, { message: text, model });
+        const reply = (data && (data.reply || data.content || data.text)) || '(no reply)';
+        addMessage('bot', reply);
+        speak(reply);
+      }catch(err){
+        addMessage('bot', 'Chat error: '+err.message, true);
+      }
+    }
+
+    els.sendBtn.addEventListener('click', doSend);
+    els.chatInput.addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter' && !e.shiftKey){
+        e.preventDefault(); doSend();
+      }
+    });
+
+    // ---------------------------
+    // Image generation
+    // ---------------------------
+    function addImage(src){
+      const div = document.createElement('div');
+      div.className = 'thumb';
+      const img = new Image();
+      img.alt = 'Generated image';
+      img.referrerPolicy = 'no-referrer';
+      img.src = src;
+      div.appendChild(img);
+      els.gallery.prepend(div);
+    }
+
+    async function doGenerate(){
+      const prompt = els.imgPrompt.value.trim();
+      if (!prompt){ toast('Write a prompt first.', 1500); return; }
+      const url = els.imageUrl.value.trim();
+      const model = els.model.value;
+      if (!url){ toast('Set your Image API URL in Settings.', 2000, 'error'); return; }
+
+      try{
+        els.genBtn.disabled = true;
+        els.genBtn.textContent = 'Generating…';
+        const data = await postJSON(url, { prompt, model, n: 1, size: '1024x1024' });
+        const images = data?.images || data?.data || [];
+        if (!images.length) throw new Error('No images returned');
+        for (const it of images){
+          if (typeof it === 'string'){
+            addImage(it);
+          } else if (it.url){
+            addImage(it.url);
+          } else if (it.b64 || it.base64){
+            addImage(`data:image/png;base64,${it.b64||it.base64}`);
+          }
+        }
+        toast('Image ready ✅', 1500);
+      }catch(err){
+        toast('Image error: '+err.message, 2500, 'error');
+      }finally{
+        els.genBtn.disabled = false;
+        els.genBtn.textContent = 'Generate Art';
+      }
+    }
+
+    els.genBtn.addEventListener('click', doGenerate);
+    els.imgPrompt.addEventListener('keydown', (e)=>{ if (e.key==='Enter') doGenerate(); });
+
+    // ---------------------------
+    // Welcome
+    // ---------------------------
+    addMessage('bot', 'Hey! Set your endpoints above, then type or hold the mic to chat. Use Scene Art to generate images. Replies will auto-narrate with your chosen TTS voice.');
+  </script>
 </body>
 </html>
