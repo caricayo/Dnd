@@ -1,4 +1,4 @@
-// D&D AI GM – Frontend (full, with size sanitizer + STT)
+// D&D AI GM – Frontend (full, with size sanitizer + STT + autospeak)
 
 // ----- Defaults (editable in footer; persisted to localStorage) -----
 let PROXY_BASE =
@@ -8,9 +8,9 @@ let MODEL = localStorage.getItem("model") || "gpt-4o-mini";
 let SYSTEM_PROMPT =
   localStorage.getItem("systemPrompt") ||
   "You are a cinematic, fair D&D Game Master. It’s a sandbox. Defer to the player’s setup and house rules. Keep turns brisk and descriptive.";
-const AUTO_SPEAK = true; // speak AI replies automatically
+const AUTO_SPEAK = true; // speak AI replies automatically (change to false to disable)
 
-
+// ----- DOM refs -----
 const els = {
   apiDot: document.getElementById("api-dot"),
   apiText: document.getElementById("api-text"),
@@ -24,6 +24,7 @@ const els = {
   genImage: document.getElementById("gen-image"),
   image: document.getElementById("scene-image"),
   imageSize: document.getElementById("image-size"),
+  clearImage: document.getElementById("clear-image"),
   muteMic: document.getElementById("mute-mic"),
   ttsToggle: document.getElementById("tts-toggle"),
   ttsProvider: document.getElementById("tts-provider"),
@@ -44,6 +45,56 @@ let session = {
   createdAt: Date.now(),
   updatedAt: Date.now(),
 };
+
+// ===== TTS (define BEFORE any usage to avoid "before initialization" errors) =====
+const TTS = {
+  speak(text) {
+    const mode = els.ttsProvider.value;
+    if (mode === "custom") {
+      const url = (els.ttsUrl.value || "").trim();
+      if (url) return customHttpSpeak(text);    // use your Worker /tts
+      return webSpeechSpeak(text);              // fallback if no URL set
+    }
+    return webSpeechSpeak(text);                // default to browser Web Speech
+  },
+};
+
+function webSpeechSpeak(text) {
+  if (!("speechSynthesis" in window)) {
+    console.warn("Web Speech API not supported in this browser.");
+    return;
+  }
+  try {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 1.0; u.pitch = 1.0; u.volume = 1.0;
+    window.speechSynthesis.speak(u);
+  } catch (e) {
+    console.error("Web Speech failed:", e);
+  }
+}
+
+async function customHttpSpeak(text) {
+  const url = (els.ttsUrl.value || "").trim();
+  if (!url) return; // silently no-op if missing
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok) {
+      console.error("TTS HTTP", res.status, await res.text());
+      return;
+    }
+    const blob = await res.blob();
+    const objUrl = URL.createObjectURL(blob);
+    const audio = new Audio(objUrl);
+    await audio.play();
+  } catch (err) {
+    console.error("Custom TTS failed:", err);
+  }
+}
 
 // ----- Sessions: save/load/list -----
 function getAllSessions() {
@@ -138,8 +189,14 @@ els.input.addEventListener("keydown", (e) => {
   }
 });
 
-// ----- Image button -----
+// ----- Image buttons -----
 els.genImage.onclick = generateImage;
+els.clearImage.onclick = () => {
+  if (els.image) {
+    els.image.removeAttribute("src");
+    els.image.alt = "Generated scene will appear here";
+  }
+};
 
 // ----- Mic: record → /stt → insert text -----
 let rec = null;
@@ -187,16 +244,16 @@ async function stopRecordingAndTranscribe() {
 }
 function pickSupportedMime() {
   const prefs = [
-    'audio/webm;codecs=opus',
-    'audio/webm',
-    'audio/mp4;codecs=mp4a.40.2',
-    'audio/mp4',
-    'audio/mpeg'
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/mp4;codecs=mp4a.40.2",
+    "audio/mp4",
+    "audio/mpeg",
   ];
   for (const m of prefs) {
     if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) return m;
   }
-  return '';
+  return "";
 }
 async function transcribeBlob(blob) {
   if (!PROXY_BASE) { alert("Set a Proxy URL first."); return; }
@@ -228,49 +285,13 @@ function pulseStatus(on) {
   dot.style.boxShadow = on ? "0 0 12px var(--success)" : "";
 }
 
-// ----- TTS -----
-const TTS = {
-  speak(text) {
-    const mode = els.ttsProvider.value;
-    if (mode === "webspeech") return webSpeechSpeak(text);
-    if (mode === "custom") return customHttpSpeak(text);
-  },
-};
-function webSpeechSpeak(text) {
-  if (!("speechSynthesis" in window)) {
-    alert("Web Speech API not supported in this browser.");
-    return;
-  }
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.rate = 1.0; u.pitch = 1.0; u.volume = 1.0;
-  window.speechSynthesis.speak(u);
-}
-async function customHttpSpeak(text) {
-  const url = els.ttsUrl.value.trim();
-  if (!url) { alert("Set a Custom TTS endpoint URL first."); return; }
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
-    });
-    if (!res.ok) throw new Error(`TTS HTTP ${res.status}`);
-    const blob = await res.blob();
-    const objUrl = URL.createObjectURL(blob);
-    const audio = new Audio(objUrl);
-    await audio.play();
-  } catch (err) {
-    console.error(err);
-    alert("Custom TTS failed. Check CORS and endpoint.");
-  }
-}
+// ----- TTS manual button -----
 els.ttsToggle.onclick = () => {
   const last = [...session.messages].reverse().find((m) => m.role === "assistant");
-  if (last) TTS.speak(last.content);
+  if (last && last.content) TTS.speak(last.content);
 };
 
-// ----- Chat send & stream -----
+// ----- Chat send & stream (SSE parsed) -----
 async function sendMessage() {
   const text = els.input.value.trim();
   if (!text) return;
@@ -322,10 +343,11 @@ async function sendMessage() {
           session.messages.push({ role: "assistant", content: gmText });
           session.lastGMUtterance = gmText;
           saveCurrentSession();
-          if (AUTO_SPEAK && gmText) {
-  TTS.speak(gmText);
-}
 
+          // Auto-speak after reply finishes
+          if (AUTO_SPEAK && gmText) {
+            TTS.speak(gmText);
+          }
           return;
         }
 
@@ -358,15 +380,14 @@ async function generateImage() {
   els.genImage.textContent = "🔄 Generating...";
   els.genImage.disabled = true;
 
-  // Sanitize size (keep your existing sanitizer behavior)
-  // Valid (most stable) sizes for current API: 256x256, 512x512, 1024x1024
+  // Sanitize size
   const chosen = (els.imageSize?.value || "1024x1024").toLowerCase();
-  const allowed = new Set(["256x256", "512x512", "1024x1024"]);
+  const allowed = new Set(["256x256", "512x512", "1024x1024", "1024x1536", "1536x1024"]);
   const safeSize = allowed.has(chosen)
     ? chosen
-    : (chosen.includes("768") ? "512x512" : "1024x1024"); // map odd values (like "auto") to safe defaults
+    : (chosen.includes("768") ? "512x512" : "1024x1024");
 
-  // Build prompt with exact ≤ 1000 char guarantee (including prefix + style)
+  // Build prompt with ≤ 1000 chars (include style lines in calculation)
   const STYLE = "Style: painterly, high detail, cinematic lighting.";
   const PREFIX = "D&D scene: ";
   const SEP = "\n";
