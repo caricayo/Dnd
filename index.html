@@ -155,14 +155,12 @@
       const t = document.createElement("div"); t.textContent = m.text;
       b.appendChild(r); b.appendChild(t); row.appendChild(b);
 
-      // inline image (optional)
       if (m.imageUrl){
         const img = document.createElement("img");
         img.src = m.imageUrl; img.className="img"; img.alt = m.scene||"scene";
         row.appendChild(img);
       }
 
-      // per-message manual art
       if (m.role==="assistant" && m.scene && m.scene!=="none" && !m.imageUrl && state.imagesMode==="manual") {
         const btn = document.createElement("button");
         btn.textContent = "Generate Art for this scene";
@@ -214,11 +212,9 @@
       data = { reply:"(Network error. Check API URL in Settings.)", scene:"none" };
     }
 
-    // Track last scene index
     let sceneIndex = null;
     if (data.scene && data.scene !== "none") sceneIndex = state.history.length;
 
-    // Attach image automatically only if mode=auto AND worker returned image
     let imageUrl = null;
     if (state.imagesMode==="auto" && data.scene && data.scene!=="none") {
       imageUrl = data.imageUrl || null;
@@ -234,7 +230,6 @@
 
   // ---------- MANUAL ART ----------
   async function generateArt(indexOverride) {
-    // Pick target message: explicit index or last scene index
     const idx = (typeof indexOverride === "number") ? indexOverride : state.lastSceneIndex;
     if (idx == null) { alert("No recent scene to illustrate yet."); return; }
     const m = state.history[idx];
@@ -328,4 +323,35 @@
     localStorage.setItem("voiceName", state.voiceName);
     alert("Saved.");
   };
-  el("clearSettings
+  el("clearSettings").onclick = ()=>{
+    localStorage.removeItem("apiBase");
+    localStorage.removeItem("imagesMode");
+    localStorage.removeItem("imgSize");
+    localStorage.removeItem("tts");
+    localStorage.removeItem("voiceName");
+    el("apiUrl").value = API_BASE_DEFAULT;
+    el("imagesMode").value = "auto";
+    el("imgSize").value = "1024";
+    el("ttsToggle").checked = false;
+    alert("Settings cleared.");
+  };
+  el("resetBtn").onclick = ()=>{ state.history=[]; state.latestImageUrl=null; state.lastSceneIndex=null; render(); };
+  el("exportBtn").onclick = ()=>{
+    const blob = new Blob([JSON.stringify(state.history,null,2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href=url; a.download="session.json"; a.click();
+    URL.revokeObjectURL(url);
+  };
+  el("genArt").onclick = ()=> generateArt();
+  el("viewFull").onclick = ()=>{
+    if(!state.latestImageUrl) return;
+    el("fsImg").src = state.latestImageUrl;
+    el("fs").style.display = "flex";
+  };
+  el("fs").onclick = ()=>{ el("fs").style.display = "none"; };
+
+  // Boot
+  render();
+</script>
+</body>
+</html>
