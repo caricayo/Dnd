@@ -1,271 +1,255 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>D&D DM — Voice + Art</title>
-  <style>
-    :root {
-      --bg: #0b0c10; --panel:#111318; --ink:#e6e8ef; --muted:#a3a7b7; --accent:#6ee7b7; --brand:#6366f1;
-      --chip:#1b1e27; --border:#212432;
-    }
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,Segoe UI,Roboto,SF Pro Text,Helvetica,Arial}
-    .wrap{max-width:920px;margin:0 auto;padding:20px}
-    header{display:flex;align-items:center;justify-content:space-between;gap:12px}
-    header h1{font-size:20px;margin:0}
-    header .btn{background:var(--brand);color:white;border:0;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer}
-    .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden}
-    .row{display:flex;gap:12px}
-    .col{flex:1}
-    .log{height:58vh;overflow:auto;padding:16px}
-    .msg{margin:12px 0;display:flex;gap:12px}
-    .msg .bubble{padding:12px 14px;border-radius:14px;background:var(--chip);max-width:70%}
-    .msg.user{justify-content:flex-end}
-    .msg.user .bubble{background:#1f2433}
-    .msg .role{font-size:12px;color:var(--muted)}
-    .img{margin-top:8px;border-radius:14px;border:1px solid var(--border);max-width:480px}
-    .composer{display:flex;gap:10px;padding:10px;border-top:1px solid var(--border)}
-    .composer input{flex:1;padding:12px 12px;border-radius:12px;border:1px solid var(--border);background:#0e111a;color:var(--ink)}
-    .composer button{padding:12px 14px;border-radius:12px;border:0;cursor:pointer;color:#0b0c10;background:var(--accent);font-weight:700}
-    .toolbar{display:flex;gap:10px;align-items:center}
-    .chip{background:var(--chip);border:1px solid var(--border);border-radius:999px;padding:6px 10px;color:var(--muted);font-size:13px}
-    details.settings{margin-top:12px}
-    details.settings summary{cursor:pointer;color:var(--muted)}
-    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-    .field{display:flex;flex-direction:column;gap:6px}
-    .field input, .field select{padding:10px;border-radius:10px;border:1px solid var(--border);background:#0e111a;color:var(--ink)}
-    .note{color:var(--muted);font-size:13px}
-    .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--ink)}
-    .small{font-size:12px;color:var(--muted)}
-    footer{margin-top:14px;color:var(--muted);font-size:12px}
-    @media (max-width:800px){.grid{grid-template-columns:1fr}}
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>D&D DM — Chat + Optional Art</title>
+<style>
+  :root{--bg:#0b0c10;--panel:#111318;--ink:#e6e8ef;--muted:#a3a7b7;--accent:#6ee7b7;--brand:#6366f1;--chip:#1b1e27;--border:#212432}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,Segoe UI,Roboto,SF Pro Text,Helvetica,Arial}
+  .wrap{max-width:960px;margin:0 auto;padding:20px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+  h1{font-size:20px;margin:0}
+  .btn{background:var(--brand);color:#fff;border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--ink);border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+  .log{height:60vh;overflow:auto;padding:16px}
+  .msg{margin:12px 0;display:flex;gap:12px}
+  .msg.user{justify-content:flex-end}
+  .bubble{padding:12px 14px;border-radius:14px;background:var(--chip);max-width:72%}
+  .msg.user .bubble{background:#1f2433}
+  .role{font-size:12px;color:var(--muted);margin-bottom:4px}
+  .img{margin-top:8px;border-radius:14px;border:1px solid var(--border);max-width:520px}
+  .composer{display:flex;gap:10px;padding:10px;border-top:1px solid var(--border)}
+  .composer input{flex:1;padding:12px;border-radius:12px;border:1px solid var(--border);background:#0e111a;color:var(--ink)}
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  details{margin-top:12px}
+  summary{cursor:pointer;color:var(--muted)}
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field input,.field select{padding:10px;border-radius:10px;border:1px solid var(--border);background:#0e111a;color:var(--ink)}
+  .note{color:var(--muted);font-size:13px}
+  footer{margin-top:12px;color:var(--muted);font-size:12px}
+  @media (max-width:800px){.grid{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <h1>🧙‍♂️ D&D DM — Voice + Art</h1>
-      <div class="toolbar">
-        <button id="speakBtn" class="btn-ghost">🎙️ Hold to Speak</button>
-        <label class="chip"><input type="checkbox" id="autoTTS"/> Auto‑TTS</label>
-        <button id="resetBtn" class="btn-ghost">Reset</button>
-        <button id="settingsBtn" class="btn">Settings</button>
-      </div>
-    </header>
-
-    <div class="card">
-      <div id="log" class="log"></div>
-      <div class="composer">
-        <input id="input" placeholder="Say something to the DM… (e.g., 'We enter the ruined city')" />
-        <button id="send">Send</button>
-      </div>
+<div class="wrap">
+  <header>
+    <h1>🧙‍♂️ D&D DM — Chat + Optional Art</h1>
+    <div class="toolbar">
+      <button id="clearBtn" class="btn-ghost">Reset Session</button>
+      <button id="exportBtn" class="btn-ghost">Export</button>
+      <button id="settingsBtn" class="btn">Settings</button>
     </div>
+  </header>
 
-    <details class="settings card" id="settingsPanel">
-      <summary>⚙️ Settings</summary>
-      <div style="padding:14px" class="grid">
-        <div class="field">
-          <label>API Proxy URL (Cloudflare Worker)</label>
-          <input id="proxyUrl" placeholder="https://your-worker.example.workers.dev" />
-          <div class="note">Leave blank for local demo. When set, the app will call your Worker for ChatGPT + AI images.</div>
-        </div>
-        <div class="field">
-          <label>Voice (for Text‑to‑Speech)</label>
-          <select id="voiceSelect"></select>
-          <div class="note">Uses browser speechSynthesis. Quality varies by OS.</div>
-        </div>
-        <div class="field">
-          <label>Model (server mode)</label>
-          <input id="model" value="gpt-4o-mini" />
-          <div class="note">Change on your Worker too if you want.</div>
-        </div>
-      </div>
-      <div style="padding:0 14px 14px 14px;display:flex;gap:10px">
-        <button id="saveSettings" class="btn">Save</button>
-        <button id="clearSettings" class="btn-ghost">Clear</button>
-        <button id="exportBtn" class="btn-ghost">Export Session</button>
-      </div>
-    </details>
-
-    <footer>Local demo uses placeholders for images and a lightweight story engine. Set a proxy for real AI.
-    </footer>
+  <div class="card">
+    <div id="log" class="log"></div>
+    <div class="composer">
+      <input id="input" placeholder="Say something to the DM… (e.g., We enter the ruined city)"/>
+      <button id="send" class="btn">Send</button>
+    </div>
   </div>
 
+  <details class="card" id="settingsPanel">
+    <summary>⚙️ Settings</summary>
+    <div style="padding:14px" class="grid">
+      <div class="field">
+        <label>API Proxy URL (your Cloudflare Worker)</label>
+        <input id="apiUrl" placeholder="https://dnd-openai-proxy.<subdomain>.workers.dev"/>
+        <div class="note">This calls your Worker’s <code>/chat</code> endpoint.</div>
+      </div>
+      <div class="field">
+        <label>Generate images</label>
+        <select id="imagesMode">
+          <option value="auto">Auto (when scene != none)</option>
+          <option value="manual">Manual (only on button)</option>
+          <option value="off">Off (never)</option>
+        </select>
+        <div class="note">Use Manual/Off to control cost.</div>
+      </div>
+      <div class="field">
+        <label>Image size</label>
+        <select id="imgSize">
+          <option value="1024">1024 × 1024 (higher cost)</option>
+          <option value="512">512 × 512 (cheaper)</option>
+          <option value="256">256 × 256 (cheapest)</option>
+        </select>
+      </div>
+    </div>
+    <div style="padding:0 14px 14px 14px;display:flex;gap:10px">
+      <button id="saveSettings" class="btn">Save</button>
+      <button id="clearSettings" class="btn-ghost">Clear</button>
+    </div>
+  </details>
+
+  <footer>Tip: set Images to <b>Manual</b> to avoid surprise charges; click the “Generate Art” button that appears on relevant turns.</footer>
+</div>
+
 <script>
-// ===== Config & State =====
-const el = (id)=>document.getElementById(id);
-const state = {
-  proxyUrl: localStorage.getItem('proxyUrl') || '',
-  model: localStorage.getItem('model') || 'gpt-4o-mini',
-  autoTTS: JSON.parse(localStorage.getItem('autoTTS')||'false'),
-  voiceName: localStorage.getItem('voiceName')||'',
-  history: [] // {role:'user'|'assistant', text:string, scene?:string, imageUrl?:string}
-};
+  // ---- USER CONFIG ----
+  const API_BASE_DEFAULT = "https://dnd-openai-proxy.christestdnd.workers.dev"; // change if needed
 
-// ===== UI Wiring =====
-el('proxyUrl').value = state.proxyUrl;
-el('model').value = state.model;
-el('autoTTS').checked = state.autoTTS;
+  // ---- STATE ----
+  const state = {
+    apiBase: localStorage.getItem("apiBase") || API_BASE_DEFAULT,
+    imagesMode: localStorage.getItem("imagesMode") || "auto",
+    imgSize: localStorage.getItem("imgSize") || "1024",
+    history: [] // { role, text, scene?, imageUrl? }
+  };
 
-el('settingsBtn').onclick = () => el('settingsPanel').open = !el('settingsPanel').open;
-el('clearSettings').onclick = () => {
-  localStorage.removeItem('proxyUrl');
-  localStorage.removeItem('model');
-  localStorage.removeItem('voiceName');
-  alert('Cleared saved settings');
-};
-el('saveSettings').onclick = () => {
-  state.proxyUrl = el('proxyUrl').value.trim();
-  state.model = el('model').value.trim();
-  localStorage.setItem('proxyUrl', state.proxyUrl);
-  localStorage.setItem('model', state.model);
-  alert('Saved.');
-};
-el('exportBtn').onclick = () => {
-  const blob = new Blob([JSON.stringify(state.history,null,2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'session.json'; a.click();
-  URL.revokeObjectURL(url);
-};
+  // ---- ELEMENTS ----
+  const el = id => document.getElementById(id);
+  const logEl = el("log");
+  el("apiUrl").value = state.apiBase;
+  el("imagesMode").value = state.imagesMode;
+  el("imgSize").value = state.imgSize;
 
-el('resetBtn').onclick = () => { state.history = []; render(); };
-el('send').onclick = send;
-el('input').addEventListener('keydown', e=>{ if(e.key==='Enter') send();});
-el('autoTTS').onchange = () => { state.autoTTS = el('autoTTS').checked; localStorage.setItem('autoTTS', state.autoTTS); };
+  // ---- RENDER ----
+  function render() {
+    logEl.innerHTML = "";
+    state.history.forEach((m, i) => {
+      const row = document.createElement("div");
+      row.className = "msg " + (m.role === "user" ? "user" : "assistant");
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      const r = document.createElement("div");
+      r.className = "role";
+      r.textContent = m.role.toUpperCase();
+      const t = document.createElement("div");
+      t.textContent = m.text;
+      bubble.appendChild(r); bubble.appendChild(t);
+      row.appendChild(bubble);
 
-function render(){
-  const log = el('log');
-  log.innerHTML = '';
-  state.history.forEach(m => {
-    const row = document.createElement('div');
-    row.className = 'msg ' + (m.role==='user'?'user':'assistant');
-    const bubble = document.createElement('div');
-    bubble.className = 'bubble';
-    const small = document.createElement('div'); small.className='role'; small.textContent = m.role.toUpperCase();
-    const text = document.createElement('div'); text.textContent = m.text;
-    bubble.appendChild(small); bubble.appendChild(text);
-    row.appendChild(bubble);
-    if (m.imageUrl){
-      const img = document.createElement('img'); img.src = m.imageUrl; img.className='img'; img.alt = m.scene||'scene';
-      row.appendChild(img);
-    }
-    log.appendChild(row);
-  });
-  log.scrollTop = log.scrollHeight;
-}
-
-// ===== Voice: TTS (browser) =====
-const synth = window.speechSynthesis;
-let voices = [];
-function loadVoices(){
-  voices = synth.getVoices();
-  const sel = el('voiceSelect'); sel.innerHTML='';
-  const optNone = document.createElement('option'); optNone.value=''; optNone.textContent='System Default'; sel.appendChild(optNone);
-  voices.forEach(v=>{ const o=document.createElement('option'); o.value=v.name; o.textContent=v.name + (v.lang?` (${v.lang})`: ''); sel.appendChild(o); });
-  sel.value = state.voiceName;
-}
-loadVoices();
-synth.onvoiceschanged = loadVoices;
-el('voiceSelect').onchange = ()=>{ state.voiceName = el('voiceSelect').value; localStorage.setItem('voiceName', state.voiceName); };
-
-function speak(text){
-  if(!state.autoTTS || !text) return;
-  const u = new SpeechSynthesisUtterance(text);
-  if(state.voiceName){ const v = voices.find(v=>v.name===state.voiceName); if(v) u.voice = v; }
-  u.rate = 1.02; u.pitch = 1.0; synth.cancel(); synth.speak(u);
-}
-
-// ===== Voice: STT (Web Speech API, when available) =====
-const hasSTT = ('webkitSpeechRecognition' in window) && (window.isSecureContext || location.hostname==='localhost');
-const rec = hasSTT ? new webkitSpeechRecognition() : null;
-if(rec){
-  rec.lang = 'en-US'; rec.continuous = false; rec.interimResults = false;
-}
-const speakBtn = el('speakBtn');
-if(!hasSTT){ speakBtn.textContent = '🎙️ Speak (HTTPS required)'; speakBtn.disabled = true; }
-else{
-  let holding = false;
-  speakBtn.onmousedown = ()=>{ holding = true; rec.start(); speakBtn.textContent='Listening… release to send'; };
-  speakBtn.onmouseup = ()=>{ if(holding){ holding=false; rec.stop(); speakBtn.textContent='🎙️ Hold to Speak'; } };
-  rec.onresult = (e)=>{ const t = Array.from(e.results).map(r=>r[0].transcript).join(' '); el('input').value = t; send(); };
-}
-
-// ===== Helpers =====
-function placeholderFor(scene){
-  const label = (scene||'scene').toUpperCase();
-  return `https://placehold.co/1024x1024/png?text=${encodeURIComponent(label)}`;
-}
-
-// Local demo narrative (very lightweight)
-function localDM(userText){
-  const t = userText.toLowerCase();
-  let scene = 'none';
-  if(/[dragon|goblin|troll|beast|monster]/.test(t)) scene = 'encounter';
-  else if(/fight|attack|strike|battle|initiative/.test(t)) scene = 'fight';
-  else if(/city|town|village|bazaar|market/.test(t)) scene = 'city';
-  else if(/loot|chest|treasure|inventory|gold/.test(t)) scene = 'loot';
-  else if(/talk|parley|negotiate|converse|speak/.test(t)) scene = 'conversation';
-  const reply = `The torch sputters as shadows crawl along the stone. ${ scene!=='none' ? 'You sense a pivotal moment.' : 'Footfalls echo in the dark.' } What do you do?`;
-  const image_prompt = scene==='none' ? '' : `Cinematic ${scene} scene in a dark fantasy style, dramatic lighting, painterly detail.`;
-  return { reply, scene, image_prompt };
-}
-
-async function callServerDM(messages){
-  const res = await fetch(state.proxyUrl.replace(/\/$/,'') + '/chat', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ messages, model: state.model })
-  });
-  if(!res.ok) throw new Error('Server error');
-  return await res.json(); // { reply, scene, image_prompt }
-}
-
-async function callServerImage(prompt){
-  const res = await fetch(state.proxyUrl.replace(/\/$/,'') + '/image', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ prompt })
-  });
-  if(!res.ok) throw new Error('Image server error');
-  return await res.json(); // { imageUrl }
-}
-
-async function send(){
-  const text = el('input').value.trim(); if(!text) return;
-  state.history.push({ role:'user', text }); render(); el('input').value='';
-
-  let decision;
-  try{
-    if(state.proxyUrl){
-      const messages = state.history.map(m=>({ role:m.role, content:m.text }));
-      decision = await callServerDM(messages);
-    } else {
-      await new Promise(r=>setTimeout(r, 200));
-      decision = localDM(text);
-    }
-  } catch (e){
-    console.error(e); decision = { reply: "(Server error). Switching to local demo.", scene: 'none' };
-    state.proxyUrl = ''; localStorage.removeItem('proxyUrl'); el('proxyUrl').value='';
-  }
-
-  let imageUrl = null;
-  if(decision.scene && decision.scene !== 'none'){
-    try{
-      if(state.proxyUrl) {
-        const img = await callServerImage(decision.image_prompt || decision.reply);
-        imageUrl = img.imageUrl || null;
-      } else {
-        imageUrl = placeholderFor(decision.scene);
+      // Show image if present
+      if (m.imageUrl) {
+        const img = document.createElement("img");
+        img.src = m.imageUrl;
+        img.className = "img";
+        img.alt = m.scene || "scene";
+        row.appendChild(img);
       }
-    } catch(e){ console.warn('Image failed', e); imageUrl = placeholderFor(decision.scene); }
+
+      // Manual art button for assistant messages that have a scene but no image yet
+      if (m.role === "assistant" && m.scene && m.scene !== "none" && !m.imageUrl && state.imagesMode === "manual") {
+        const btn = document.createElement("button");
+        btn.textContent = "Generate Art";
+        btn.className = "btn-ghost";
+        btn.onclick = () => generateArt(i);
+        row.appendChild(btn);
+      }
+
+      logEl.appendChild(row);
+    });
+    logEl.scrollTop = logEl.scrollHeight;
   }
 
-  state.history.push({ role:'assistant', text: decision.reply, scene: decision.scene, imageUrl });
-  render(); speak(decision.reply);
-}
+  // ---- CHAT ----
+  async function send() {
+    const text = el("input").value.trim();
+    if (!text) return;
+    state.history.push({ role: "user", text });
+    render();
+    el("input").value = "";
 
-// Boot
-render();
+    // Call your Worker
+    let data;
+    try {
+      const res = await fetch(state.apiBase.replace(/\/$/, "") + "/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: state.history.map(m => ({ role: m.role, content: m.text })),
+          // The Worker ignores img size right now, but we keep it for future.
+          imgSize: state.imgSize
+        })
+      });
+      data = await res.json();
+    } catch (e) {
+      data = { reply: "(Network error. Check API URL in Settings.)", scene: "none" };
+    }
+
+    // Optional cost control: only attach imageUrl if mode permits
+    let imageUrl = null;
+    if (state.imagesMode === "auto" && data.scene && data.scene !== "none") {
+      // If Worker returned an image, use it; else leave null (you can later click Generate Art)
+      imageUrl = data.imageUrl || null;
+    }
+
+    state.history.push({
+      role: "assistant",
+      text: data.reply || "(No reply)",
+      scene: data.scene || "none",
+      imageUrl
+    });
+    render();
+  }
+
+  // Manual art generation (calls the Worker again but just for image)
+  async function generateArt(idx) {
+    const m = state.history[idx];
+    if (!m || m.role !== "assistant" || !m.scene || m.scene === "none") return;
+
+    // Simple re-ask technique: send the last assistant text as the context asking for image_prompt
+    // Your Worker already generates image when scene!=none; this call just re-triggers it.
+    try {
+      const res = await fetch(state.apiBase.replace(/\/$/, "") + "/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [
+            ...state.history.map(x => ({ role: x.role, content: x.text })),
+            { role: "user", content: "Generate an illustration for the last scene only." }
+          ]
+        })
+      });
+      const data = await res.json();
+      // If imageUrl came back, attach it; otherwise fallback placeholder
+      m.imageUrl = data.imageUrl || `https://placehold.co/1024x1024/png?text=${encodeURIComponent((m.scene||"scene").toUpperCase())}`;
+      render();
+    } catch (e) {
+      m.imageUrl = `https://placehold.co/1024x1024/png?text=${encodeURIComponent((m.scene||"scene").toUpperCase())}`;
+      render();
+    }
+  }
+
+  // ---- UI WIRING ----
+  el("send").onclick = send;
+  el("input").addEventListener("keydown", e => { if (e.key === "Enter") send(); });
+  el("settingsBtn").onclick = () => el("settingsPanel").open = !el("settingsPanel").open;
+
+  el("saveSettings").onclick = () => {
+    state.apiBase = el("apiUrl").value.trim() || state.apiBase;
+    state.imagesMode = el("imagesMode").value;
+    state.imgSize = el("imgSize").value;
+    localStorage.setItem("apiBase", state.apiBase);
+    localStorage.setItem("imagesMode", state.imagesMode);
+    localStorage.setItem("imgSize", state.imgSize);
+    alert("Saved.");
+  };
+
+  el("clearSettings").onclick = () => {
+    localStorage.removeItem("apiBase");
+    localStorage.removeItem("imagesMode");
+    localStorage.removeItem("imgSize");
+    el("apiUrl").value = API_BASE_DEFAULT;
+    el("imagesMode").value = "auto";
+    el("imgSize").value = "1024";
+    alert("Settings cleared.");
+  };
+
+  el("clearBtn").onclick = () => { state.history = []; render(); };
+  el("exportBtn").onclick = () => {
+    const blob = new Blob([JSON.stringify(state.history, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "session.json"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Boot
+  render();
 </script>
 </body>
 </html>
