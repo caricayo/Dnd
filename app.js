@@ -189,11 +189,50 @@ const TTS = {
     return speakViaProvider(text);
   },
 };
-function speakViaProvider(text) {
-  if (!("speechSynthesis" in window)) { console.warn("Web Speech API not supported."); return; }
-  try { window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate=1; u.pitch=1; u.volume=1; window.speechSynthesis.speak(u); }
-  catch(e){ console.error("Web Speech failed:", e); }
+async function speakViaProvider(text) {
+  try {
+    if (!text) return;
+
+    // Web Speech (browser native)
+    if (els.ttsProvider && els.ttsProvider.value === "webspeech") {
+      if (!("speechSynthesis" in window)) {
+        console.warn("Web Speech API not supported.");
+        return;
+      }
+      try {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.rate = 1;
+        u.pitch = 1;
+        u.volume = 1;
+        window.speechSynthesis.speak(u);
+      } catch (e) {
+        console.error("Web Speech failed:", e);
+      }
+      return;
+    }
+
+    // Worker TTS
+    if (els.ttsProvider && els.ttsProvider.value === "worker") {
+      if (typeof customHttpSpeak === "function") {
+        await customHttpSpeak(
+          text,
+          (typeof PROXY_BASE !== "undefined" ? PROXY_BASE : "") + "/tts"
+        );
+      }
+      return;
+    }
+
+    // Custom HTTP TTS
+    if (typeof customHttpSpeak === "function") {
+      const url = (els.ttsUrl && els.ttsUrl.value) ? els.ttsUrl.value.trim() : "";
+      await customHttpSpeak(text, url || undefined);
+    }
+  } catch (e) {
+    console.error("speakViaProvider failed:", e);
+  }
 }
+
 async function speakViaProvider(text) {
   const url = (urlOverride && urlOverride.trim) ? urlOverride.trim() : ((els.ttsUrl?.value || "").trim());
   if (!url) return;
