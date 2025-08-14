@@ -485,6 +485,42 @@ body {
   #sidebar { position: fixed; top: var(--header-h); left: 0; bottom: 0; width: 300px; z-index: 20; }
   #sidebar.collapsed { transform: translateX(-105%); }
 }
+/* ============ Mobile/desktop visibility helpers ============ */
+.mobile-only { display: none; }
+.desktop-only { display: initial; }
+
+@media (max-width: 900px) {
+  .mobile-only { display: block; }
+  .desktop-only { display: none; }
+}
+
+/* ============ Mobile scrolling fix ============ */
+/* Allow page/content to scroll again (we keep .messages scrollable) */
+@media (max-width: 900px) {
+  html, body { height: 100%; }
+  body { overflow: auto; }                /* was hidden before */
+
+  .app-wrap {
+    height: calc(100dvh - var(--header-h, 56px));
+    height: calc(100vh - var(--header-h, 56px));
+    overflow: auto;                        /* allow page scroll */
+  }
+
+  .content {
+    overflow: auto;                        /* allow main scroll too */
+    min-height: 0;
+  }
+
+  /* When Scene Art moves into sidebar, keep it compact & scrollable */
+  #sidebar .image-panel {
+    max-height: 60vh;
+    overflow: auto;
+  }
+
+  /* Image never overflows its box on mobile */
+  .image-wrap { height: clamp(140px, 26vh, 280px); border: 1px dashed var(--border); }
+  #scene-image { width: 100%; height: 100%; object-fit: contain; }
+}
 
 }
 
