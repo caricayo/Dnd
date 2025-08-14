@@ -627,20 +627,24 @@ function pruneMessages(msgs, maxTokens = 3500, hardLimit = 24) {
 function appendMessage(role, content) {
   const wrapper = document.createElement("div");
   wrapper.className = `msg ${role}`;
-  wrapper.innerHTML = `<div class="role">${role}</div>
-                       <div class="content"></div>`;
-  wrapper.querySelector(".content").textContent = content;
+
+  // grouping: if previous message has same role, mark this one as continued
+  const last = els.messages.lastElementChild;
+  if (last && last.classList.contains(role)) {
+    wrapper.classList.add("continued");
+  }
+
+  wrapper.innerHTML = `
+    <div class="role">${role.toUpperCase()}</div>
+    <div class="content"></div>
+  `;
+  wrapper.querySelector(".content").textContent = content || "";
   els.messages.appendChild(wrapper);
-  scrollMessagesToEnd();
-  return wrapper;
-}
-function scrollMessagesToEnd() {
+
+  // autoscroll to bottom
   els.messages.scrollTop = els.messages.scrollHeight;
-}
-function escapeHtml(s) {
-  return s.replace(/[&<>'"]/g, (c) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;",
-  }[c]));
+
+  return wrapper;
 }
 
 // ----- Health indicator -----
