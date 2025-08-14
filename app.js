@@ -46,7 +46,45 @@ const els = {
   proxyUrl: document.getElementById("proxy-url"),
   model: document.getElementById("model"),
   systemPrompt: document.getElementById("system-prompt"),
+
+  lightbox: document.getElementById("image-lightbox"),
+  lightboxImg: document.getElementById("lightbox-img"),
+
 };
+
+// ----- Image Lightbox (open/close) -----
+function openLightbox(src) {
+  if (!src || !els.lightbox || !els.lightboxImg) return;
+  els.lightboxImg.src = src;
+  els.lightbox.classList.remove("hidden");
+  els.lightbox.setAttribute("aria-hidden", "false");
+  document.body.classList.add("no-scroll");
+}
+
+function closeLightbox() {
+  if (!els.lightbox) return;
+  els.lightbox.classList.add("hidden");
+  els.lightbox.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("no-scroll");
+  // Optional: clear src after fade
+  if (els.lightboxImg) els.lightboxImg.removeAttribute("src");
+}
+
+// Click image to open; click overlay to close; ESC to close
+if (els.image) {
+  els.image.style.cursor = "zoom-in";
+  els.image.addEventListener("click", () => {
+    const src = els.image.getAttribute("src");
+    if (src) openLightbox(src);
+  });
+}
+if (els.lightbox) {
+  els.lightbox.addEventListener("click", closeLightbox);
+}
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeLightbox();
+});
+
 // Move the Scene Art panel into the sidebar on mobile, back to main on desktop
 (function relocateSceneArt() {
   const scenePanel = document.querySelector(".image-panel");
