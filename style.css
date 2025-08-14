@@ -271,42 +271,85 @@ body {
   .image-wrap { height: clamp(220px, 42vh, 420px); border: 1px dashed var(--border); }
   #scene-image { width: 100%; height: 100%; object-fit: contain; }
 }
-/* Mobile chat panel improvements */
-@media (max-width: 768px) {
-  .chat-panel {
+/* ============= MOBILE LAYOUT (<= 900px) ============= */
+:root { --header-h: 56px; } /* tweak if your header is taller */
+
+@media (max-width: 900px) {
+  /* 1) Lock the page height to the device's dynamic viewport
+     and stop the body from scrolling; we'll scroll inside panels */
+  html, body { height: 100%; }
+  body { overflow: hidden; }
+
+  /* 2) The app area fills the screen below the header */
+  .app-wrap {
+    height: calc(100dvh - var(--header-h)); /* use dynamic viewport on mobile */
+    /* Fallback for older Safari (order matters): */
+    height: calc(100vh - var(--header-h));
+    display: grid;
+    grid-template-columns: 1fr; /* sidebar is off-canvas on mobile */
+  }
+
+  /* 3) Main content becomes a vertical stack that can shrink */
+  .content {
+    overflow: hidden; /* prevent page scroll here */
+    min-height: 0;    /* critical so children can scroll */
     display: flex;
-    flex-direction: column;
-    height: 70vh; /* Fit within most of the screen */
-    background: rgba(0, 0, 0, 0.4);
-    border-radius: 8px;
-    overflow: hidden;
   }
 
-  /* Scrollable messages area */
-  #messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 0.75rem;
-  }
-
-  /* Composer stays pinned at the bottom */
-  .composer {
-    padding: 0.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(0, 0, 0, 0.5);
-  }
-
-  /* Make message bubbles fit better on mobile */
-  .message {
-    max-width: 90%;
-    word-wrap: break-word;
-  }
-
-  /* Reduce spacing between panels */
   .panels {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 12px;
+    width: 100%;
+    height: 100%;
+    min-height: 0;    /* critical */
   }
+
+  /* 4) Image panel stays compact, chat panel gets the rest */
+  .image-panel { flex: 0 0 auto; }
+  .chat-panel  {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;    /* critical */
+    overflow: hidden; /* no outer scroll, inner messages will scroll */
+  }
+
+  /* 5) The messages list is the scrollable region */
+  .messages {
+    flex: 1 1 auto;
+    min-height: 0;              /* critical */
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-right: 8px;         /* keep text clear of scrollbar */
+  }
+
+  /* 6) Composer sticks to the bottom of the chat panel */
+  .composer {
+    position: sticky;
+    bottom: 0;
+    background: linear-gradient(180deg, rgba(17,19,24,.6), var(--panel-2));
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+    margin-top: 8px;
+    z-index: 1;
+  }
+
+  /* 7) Sidebar truly off-canvas on phones (toggle with ☰) */
+  #sidebar { position: fixed; top: var(--header-h); left: 0; bottom: 0; width: 300px; z-index: 20; }
+  #sidebar.collapsed { transform: translateX(-105%); }
+
+  /* 8) Thumb-friendly controls */
+  .btn, .icon-btn, .field input, .field select, .composer textarea {
+    padding: 12px 14px;
+    font-size: 16px;    /* avoid iOS zoom-on-focus */
+    border-radius: 12px;
+  }
+
+  /* 9) Image never overflows its box */
+  .image-wrap { height: clamp(220px, 42vh, 420px); border: 1px dashed var(--border); }
+  #scene-image { width: 100%; height: 100%; object-fit: contain; }
+}
+
 }
 
