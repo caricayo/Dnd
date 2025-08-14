@@ -647,6 +647,17 @@ function appendMessage(role, content) {
   return wrapper;
 }
 
+// Simple HTML escaping to prevent injection in session names, messages, etc.
+function escapeHtml(str) {
+  if (typeof str !== "string") return "";
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 // ----- Health indicator -----
 async function checkHealth() {
   if (!PROXY_BASE) {
