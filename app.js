@@ -47,6 +47,26 @@ const els = {
   model: document.getElementById("model"),
   systemPrompt: document.getElementById("system-prompt"),
 };
+// Move the Scene Art panel into the sidebar on mobile, back to main on desktop
+(function relocateSceneArt() {
+  const scenePanel = document.querySelector(".image-panel");
+  const panels = document.querySelector(".panels");
+  const mobileSlot = document.getElementById("mobile-scene-slot");
+  if (!scenePanel || !panels || !mobileSlot) return;
+
+  const mq = window.matchMedia("(max-width: 900px)");
+  function apply() {
+    if (mq.matches) {
+      // On mobile: put Scene Art inside the collapsible sidebar (hidden when sidebar collapsed)
+      if (!mobileSlot.contains(scenePanel)) mobileSlot.appendChild(scenePanel);
+    } else {
+      // On desktop: put it back at the top of the main panels
+      if (!panels.contains(scenePanel)) panels.insertBefore(scenePanel, panels.firstChild);
+    }
+  }
+  mq.addEventListener ? mq.addEventListener("change", apply) : mq.addListener(apply);
+  apply();
+})();
 
 // ---- Mobile audio unlock (required for iOS/Android autoplay policies) ----
 let AUDIO_UNLOCKED = false;
