@@ -52,68 +52,42 @@ const els = {
   lightboxImg: document.getElementById("lightbox-img"),
 };
 
-async function speakViaProvider(text) {
-  try {
-    if (!text) return;
-
-    // Web Speech (browser native)
-    if (els.ttsProvider && els.ttsProvider.value === "webspeech") {
-      if (!("speechSynthesis" in window)) {
-        console.warn("Web Speech API not supported.");
-        return;
-      }
-      try {
-        window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(text);
-        u.rate = 1;
-        u.pitch = 1;
-        u.volume = 1;
-        window.speechSynthesis.speak(u);
-      } catch (e) {
-        console.error("Web Speech failed:", e);
-      }
-      return;
-    }
-
-    // Worker TTS
-    if (els.ttsProvider && els.ttsProvider.value === "worker") {
-      if (typeof customHttpSpeak === "function") {
-        await customHttpSpeak(
-          text,
-          (typeof PROXY_BASE !== "undefined" ? PROXY_BASE : "") + "/tts"
-        );
-      }
-      return;
-    }
-
-    // Custom HTTP TTS
-    if (typeof customHttpSpeak === "function") {
-      const url = (els.ttsUrl && els.ttsUrl.value) ? els.ttsUrl.value.trim() : "";
-      await customHttpSpeak(text, url || undefined);
-    }
-  } catch (e) {
-    console.error("speakViaProvider failed:", e);
-  }
-}
-
-// --- Added: unified TTS switch helper ---
-      return;
-    }
-    if (els.ttsProvider && els.ttsProvider.value === "worker") {
-      if (typeof customHttpSpeak === "function") {
-        await speakViaProvider(text, (typeof PROXY_BASE !== "undefined" ? PROXY_BASE : "") + "/tts");
-      }
-      return;
-    }
-    // default/custom
-    if (typeof customHttpSpeak === "function") {
-      const url = (els.ttsUrl && els.ttsUrl.value) ? els.ttsUrl.value.trim() : "";
-      await speakViaProvider(text, url || undefined);
-    }
-  } catch (e) {
-    console.error("speakViaProvider failed:", e);
-  }
-}
+55  async function speakViaProvider(text) {
+56    try {
+57      if (!text) { return; }
+58
+59      if (els.ttsProvider && els.ttsProvider.value === "webspeech") {
+60        if (!("speechSynthesis" in window)) {
+61          console.warn("Web Speech API not supported.");
+62        } else {
+63          try {
+64            window.speechSynthesis.cancel();
+65            const u = new SpeechSynthesisUtterance(text);
+66            u.rate = 1;
+67            u.pitch = 1;
+68            u.volume = 1;
+69            window.speechSynthesis.speak(u);
+70          } catch (e) {
+71            console.error("Web Speech failed:", e);
+72          }
+73        }
+74      } else if (els.ttsProvider && els.ttsProvider.value === "worker") {
+75        if (typeof customHttpSpeak === "function") {
+76          await customHttpSpeak(
+77            text,
+78            (typeof PROXY_BASE !== "undefined" ? PROXY_BASE : "") + "/tts"
+79          );
+80        }
+81      } else {
+82        if (typeof customHttpSpeak === "function") {
+83          const url = (els.ttsUrl && els.ttsUrl.value) ? els.ttsUrl.value.trim() : "";
+84          await customHttpSpeak(text, url || undefined);
+85        }
+86      }
+87    } catch (e) {
+88      console.error("speakViaProvider failed:", e);
+89    }
+90  }
 
 
 // ----- Image Lightbox (open/close) -----
@@ -218,27 +192,35 @@ const TTS = {
   speak(text) {
     unlockAudioOnce();
     stopSpeaking();
-    const mode = els.ttsProvider?.value || "webspeech";
-    if (mode === "custom") {
-      const url = (urlOverride && urlOverride.trim) ? urlOverride.trim() : ((els.ttsUrl?.value || "").trim());
-      if (url) return speakViaProvider(text);
-      return speakViaProvider(text);
-    }
     return speakViaProvider(text);
   },
 };
-function speakViaProvider(text) {
-  if (!("speechSynthesis" in window)) { console.warn("Web Speech API not supported."); return; }
-  try { window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate=1; u.pitch=1; u.volume=1; window.speechSynthesis.speak(u); }
-  catch(e){ console.error("Web Speech failed:", e); }
-}
-    const blob = await res.blob();
+
+async function customHttpSpeak(text, urlOverride) {
+   try {
+    const url = (urlOverride && urlOverride.trim) ? urlOverride.trim() : ((els.ttsUrl?.value || "").trim());
+     if (!url) return;
+     const res = await fetch(url, {
+       method: "POST",
+       headers: { "Content-Type": "application/json" },
+       body: JSON.stringify({ text })
+    });
+     if (!res.ok) {
+       console.error("TTS HTTP", res.status, await res.text());
+       return;
+     }
+     const blob = await res.blob();
     currentAudioUrl = URL.createObjectURL(blob);
-    currentAudio = new Audio(currentAudioUrl);
-    currentAudio.onended = () => { try { URL.revokeObjectURL(currentAudioUrl); } catch{} currentAudio=null; currentAudioUrl=null; };
-    await currentAudio.play();
-  } catch(err){ console.error("Custom TTS failed:", err); }
-}
+     currentAudio = new Audio(currentAudioUrl);
+    currentAudio.onended = () => {
+       try { if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl); } catch {}
+       currentAudio = null; currentAudioUrl = null;
+     };
+     await currentAudio.play();
+   } catch (err) {
+     console.error("Custom TTS failed:", err);
+   }
+ }
 
 // ----- Sessions: save/load/list -----
 function getAllSessions() {
