@@ -592,4 +592,69 @@ body {
 body.no-scroll { overflow: hidden !important; }
 
 }
+/* --- Chat container uses a column flow --- */
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px 10px 14px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+}
+
+/* --- Each message row --- */
+.msg {
+  display: flex;                 /* lets us align left/right */
+  align-items: flex-end;         /* bottoms align neatly */
+  gap: 6px;
+}
+
+/* Align like a messenger */
+.msg.assistant { justify-content: flex-start; }
+.msg.user      { justify-content: flex-end; }
+
+/* Role label */
+.msg .role {
+  font-size: 11px;
+  letter-spacing: .06em;
+  opacity: .6;
+  margin: 0 4px;
+}
+
+/* --- Bubble --- */
+.msg .content {
+  display: inline-block;         /* shrink to fit content */
+  width: fit-content;            /* <-- key: no stretching */
+  max-width: min(680px, 86%);    /* wraps nicely on desktop & mobile */
+  height: auto !important;       /* ensure auto height */
+  min-height: 0 !important;      /* kill accidental min-heights */
+  white-space: pre-wrap;         /* keep newlines */
+  overflow-wrap: anywhere;       /* wrap long words/URLs */
+  line-height: 1.45;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--panel-2, rgba(255,255,255,.06));
+  border: 1px solid var(--border, rgba(255,255,255,.12));
+}
+
+/* Colors / subtle tails */
+.msg.user .content {
+  background: rgba(99,102,241,.15);
+  border-color: rgba(99,102,241,.35);
+  border-bottom-right-radius: 6px;
+}
+.msg.assistant .content {
+  border-bottom-left-radius: 6px;
+}
+
+/* --- Bubble grouping (consecutive same-sender) --- */
+.msg.continued .role { display: none; }
+.msg.user.continued .content       { border-top-right-radius: 6px; margin-top: -2px; }
+.msg.assistant.continued .content  { border-top-left-radius: 6px;  margin-top: -2px; }
+
+/* Mobile tweaks */
+@media (max-width: 900px) {
+  .msg .content { max-width: 92%; padding: 10px 12px; }
+}
 
