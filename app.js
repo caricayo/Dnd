@@ -52,42 +52,42 @@ const els = {
   lightboxImg: document.getElementById("lightbox-img"),
 };
 
-55  async function speakViaProvider(text) {
-56    try {
-57      if (!text) { return; }
+async function speakViaProvider(text) {
+try {
+if (!text) { return; }
 58
-59      if (els.ttsProvider && els.ttsProvider.value === "webspeech") {
-60        if (!("speechSynthesis" in window)) {
-61          console.warn("Web Speech API not supported.");
-62        } else {
-63          try {
-64            window.speechSynthesis.cancel();
-65            const u = new SpeechSynthesisUtterance(text);
-66            u.rate = 1;
-67            u.pitch = 1;
-68            u.volume = 1;
-69            window.speechSynthesis.speak(u);
-70          } catch (e) {
-71            console.error("Web Speech failed:", e);
-72          }
-73        }
-74      } else if (els.ttsProvider && els.ttsProvider.value === "worker") {
-75        if (typeof customHttpSpeak === "function") {
-76          await customHttpSpeak(
-77            text,
-78            (typeof PROXY_BASE !== "undefined" ? PROXY_BASE : "") + "/tts"
-79          );
-80        }
-81      } else {
-82        if (typeof customHttpSpeak === "function") {
-83          const url = (els.ttsUrl && els.ttsUrl.value) ? els.ttsUrl.value.trim() : "";
-84          await customHttpSpeak(text, url || undefined);
-85        }
-86      }
-87    } catch (e) {
-88      console.error("speakViaProvider failed:", e);
-89    }
-90  }
+if (els.ttsProvider && els.ttsProvider.value === "webspeech") {
+if (!("speechSynthesis" in window)) {
+console.warn("Web Speech API not supported.");
+} else {
+try {
+window.speechSynthesis.cancel();
+const u = new SpeechSynthesisUtterance(text);
+u.rate = 1;
+u.pitch = 1;
+u.volume = 1;
+window.speechSynthesis.speak(u);
+} catch (e) {
+console.error("Web Speech failed:", e);
+}
+}
+} else if (els.ttsProvider && els.ttsProvider.value === "worker") {
+if (typeof customHttpSpeak === "function") {
+await customHttpSpeak(
+text,
+(typeof PROXY_BASE !== "undefined" ? PROXY_BASE : "") + "/tts"
+);
+}
+} else {
+if (typeof customHttpSpeak === "function") {
+const url = (els.ttsUrl && els.ttsUrl.value) ? els.ttsUrl.value.trim() : "";
+await customHttpSpeak(text, url || undefined);
+}
+}
+} catch (e) {
+console.error("speakViaProvider failed:", e);
+}
+}
 
 
 // ----- Image Lightbox (open/close) -----
