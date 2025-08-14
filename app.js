@@ -615,3 +615,16 @@ async function checkHealth() {
 
 checkHealth();
 renderSessions();
+
+// Keep composer visible above the mobile keyboard (iOS/Android)
+(function keyboardSafeArea() {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  const apply = () => {
+    const kb = Math.max(0, window.innerHeight - vv.height);
+    document.documentElement.style.setProperty('--kb', kb + 'px');
+  };
+  vv.addEventListener('resize', apply);
+  vv.addEventListener('scroll', apply);
+  apply();
+})();
