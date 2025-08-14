@@ -271,4 +271,42 @@ body {
   .image-wrap { height: clamp(220px, 42vh, 420px); border: 1px dashed var(--border); }
   #scene-image { width: 100%; height: 100%; object-fit: contain; }
 }
+/* Mobile chat panel improvements */
+@media (max-width: 768px) {
+  .chat-panel {
+    display: flex;
+    flex-direction: column;
+    height: 70vh; /* Fit within most of the screen */
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  /* Scrollable messages area */
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.75rem;
+  }
+
+  /* Composer stays pinned at the bottom */
+  .composer {
+    padding: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  /* Make message bubbles fit better on mobile */
+  .message {
+    max-width: 90%;
+    word-wrap: break-word;
+  }
+
+  /* Reduce spacing between panels */
+  .panels {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}
 
