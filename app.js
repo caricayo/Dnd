@@ -38,6 +38,7 @@ const els = {
   // voice
   muteMic: document.getElementById("mute-mic"),
   ttsToggle: document.getElementById("tts-toggle"),
+  ttsStop: document.getElementById("tts-stop"),
   ttsProvider: document.getElementById("tts-provider"),
   ttsUrl: document.getElementById("tts-url"),
 
@@ -46,6 +47,50 @@ const els = {
   model: document.getElementById("model"),
   systemPrompt: document.getElementById("system-prompt"),
 };
+
+// ---- Mobile audio unlock (required for iOS/Android autoplay policies) ----
+let AUDIO_UNLOCKED = false;
+
+function unlockAudioOnce() {
+  if (AUDIO_UNLOCKED) return;
+
+  // 1) Nudge Web Speech
+  try {
+    if ("speechSynthesis" in window) {
+      const u = new SpeechSynthesisUtterance(" ");
+      u.volume = 0;
+      window.speechSynthesis.speak(u);
+    }
+  } catch {}
+
+  // 2) Try Web Audio
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (Ctx) {
+      const ctx = new Ctx();
+      const buf = ctx.createBuffer(1, 1, 22050);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(ctx.destination);
+      src.start(0);
+      if (ctx.state === "suspended") ctx.resume();
+    }
+  } catch {}
+
+  // 3) Try HTMLAudio silent frame
+  try {
+    const a = new Audio("data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAA");
+    a.muted = true;
+    const p = a.play();
+    if (p && p.catch) p.catch(() => {});
+  } catch {}
+
+  AUDIO_UNLOCKED = true;
+  document.removeEventListener("touchstart", unlockAudioOnce);
+  document.removeEventListener("click", unlockAudioOnce);
+}
+document.addEventListener("touchstart", unlockAudioOnce, { once: true, passive: true });
+document.addEventListener("click", unlockAudioOnce, { once: true });
 
 // ----- Session state -----
 let session = {
@@ -60,12 +105,38 @@ let session = {
 };
 
 // ===== TTS (define BEFORE any usage) =====
+let currentAudio = null;    // active <audio> element (Custom TTS)
+let currentAudioUrl = null; // blob URL to revoke
+
+function stopSpeaking() {
+  // Stop Web Speech
+  if ("speechSynthesis" in window) {
+    try { window.speechSynthesis.cancel(); } catch {}
+  }
+  // Stop custom audio
+  try {
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+    }
+    if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl);
+  } catch {}
+  currentAudio = null;
+  currentAudioUrl = null;
+}
+
 const TTS = {
   speak(text) {
+    // Ensure audio unlocked on mobile
+    unlockAudioOnce();
+
+    // Stop any ongoing speech to avoid overlap
+    stopSpeaking();
+
     const mode = els.ttsProvider?.value || "webspeech";
     if (mode === "custom") {
       const url = (els.ttsUrl?.value || "").trim();
-      if (url) return customHttpSpeak(text); // use your Worker /tts
+      if (url) return customHttpSpeak(text); // /tts Worker
       return webSpeechSpeak(text);           // fallback if URL missing
     }
     return webSpeechSpeak(text);
@@ -91,6 +162,9 @@ async function customHttpSpeak(text) {
   const url = (els.ttsUrl?.value || "").trim();
   if (!url) return; // silent no-op if not set
   try {
+    // cleanup any existing audio first
+    stopSpeaking();
+
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -101,9 +175,14 @@ async function customHttpSpeak(text) {
       return;
     }
     const blob = await res.blob();
-    const objUrl = URL.createObjectURL(blob);
-    const audio = new Audio(objUrl);
-    await audio.play();
+    currentAudioUrl = URL.createObjectURL(blob);
+    currentAudio = new Audio(currentAudioUrl);
+    currentAudio.onended = () => {
+      try { URL.revokeObjectURL(currentAudioUrl); } catch {}
+      currentAudio = null;
+      currentAudioUrl = null;
+    };
+    await currentAudio.play();
   } catch (err) {
     console.error("Custom TTS failed:", err);
   }
@@ -152,12 +231,42 @@ function loadSession(id) {
   scrollMessagesToEnd();
 }
 
-// Force TTS to Custom + your URL every load
+// ----- Init footer controls -----
+if (els.proxyUrl) els.proxyUrl.value = PROXY_BASE;
+if (els.model) els.model.value = MODEL;
+if (els.systemPrompt) els.systemPrompt.value = SYSTEM_PROMPT;
+
+// Force TTS to Custom + your URL every load (and remember it)
 if (els.ttsProvider) els.ttsProvider.value = "custom";
 if (els.ttsUrl) els.ttsUrl.value = "https://dnd-openai-proxy.christestdnd.workers.dev/tts";
 localStorage.setItem("ttsProvider", "custom");
 localStorage.setItem("ttsUrl", "https://dnd-openai-proxy.christestdnd.workers.dev/tts");
 
+els.proxyUrl?.addEventListener("change", () => {
+  PROXY_BASE = els.proxyUrl.value.trim();
+  localStorage.setItem("proxyUrl", PROXY_BASE);
+  checkHealth();
+});
+els.model?.addEventListener("change", () => {
+  MODEL = els.model.value.trim();
+  session.model = MODEL;
+  localStorage.setItem("model", MODEL);
+});
+els.systemPrompt?.addEventListener("change", () => {
+  SYSTEM_PROMPT = els.systemPrompt.value;
+  session.system = SYSTEM_PROMPT;
+  session.messages[0] = { role: "system", content: SYSTEM_PROMPT };
+  localStorage.setItem("systemPrompt", SYSTEM_PROMPT);
+  saveCurrentSession();
+});
+
+// Persist TTS fields if user changes them later
+els.ttsProvider?.addEventListener("change", () => {
+  localStorage.setItem("ttsProvider", els.ttsProvider.value);
+});
+els.ttsUrl?.addEventListener("change", () => {
+  localStorage.setItem("ttsUrl", els.ttsUrl.value.trim());
+});
 
 // ----- Sidebar toggle (collapsible settings) -----
 if (els.sidebarToggle && els.sidebar) {
@@ -299,11 +408,12 @@ function pulseStatus(on) {
   dot.style.boxShadow = on ? "0 0 12px var(--success)" : "";
 }
 
-// ----- TTS manual button -----
+// ----- TTS buttons -----
 els.ttsToggle && (els.ttsToggle.onclick = () => {
   const last = [...session.messages].reverse().find((m) => m.role === "assistant");
   if (last && last.content) TTS.speak(last.content);
 });
+els.ttsStop && (els.ttsStop.onclick = stopSpeaking);
 
 // ----- Chat send & stream (SSE parsed) -----
 async function sendMessage() {
@@ -385,7 +495,7 @@ async function sendMessage() {
   }
 }
 
-// ----- Image generation (spinner + prompt cap ≤ 1000 + size sanitizer) -----
+// ----- Image generation (spinner + prompt cap ≤ 1000 + safe size mapping) -----
 async function generateImage() {
   if (!session.lastGMUtterance) { alert("No GM narration yet. Send a message first."); return; }
   if (!PROXY_BASE) { alert("Set a Proxy URL in the sidebar first."); return; }
@@ -394,14 +504,13 @@ async function generateImage() {
   els.genImage.textContent = "🔄 Generating...";
   els.genImage.disabled = true;
 
-  // Sanitize size (supports square/portrait/landscape + safe fallback)
+  // Upstream supports ONLY: 256x256, 512x512, 1024x1024.
+  // Map any non-square choice (e.g., 1024x1536 / 1536x1024 / auto) to 1024x1024.
   const chosen = (els.imageSize?.value || "1024x1024").toLowerCase();
-  const allowed = new Set(["256x256", "512x512", "1024x1024", "1024x1536", "1536x1024"]);
-  const safeSize = allowed.has(chosen)
-    ? chosen
-    : (chosen.includes("768") ? "512x512" : "1024x1024");
+  const upstreamAllowed = new Set(["256x256", "512x512", "1024x1024"]);
+  const safeSize = upstreamAllowed.has(chosen) ? chosen : "1024x1024";
 
-  // Build prompt with ≤ 1000 chars (include styling text in calculation)
+  // Build prompt with ≤ 1000 chars
   const STYLE = "Style: painterly, high detail, cinematic lighting.";
   const PREFIX = "D&D scene: ";
   const SEP = "\n";
@@ -434,7 +543,6 @@ async function generateImage() {
     console.error(err);
     alert(`Image generation failed: ${err.message}`);
   } finally {
-    // Reset button state
     els.genImage.textContent = "🎨 Generate Scene";
     els.genImage.disabled = false;
   }
